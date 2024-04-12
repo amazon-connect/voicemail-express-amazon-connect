@@ -1,0 +1,197 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Deploys the Voicemail Express core components.
+
+Parameters:
+  ConnectInstanceAlias:
+    Type: String
+  ExpiredLinkBehavior:
+    Type: String
+  RecordingsExpireInXDays:
+    Type: String
+
+Conditions:
+  AudioDelete: !Equals [!Ref ExpiredLinkBehavior, delete]
+  AudioGlacier: !Equals [!Ref ExpiredLinkBehavior, glacier]
+  AudioLifecycle: !Or [!Equals [!Ref ExpiredLinkBehavior, glacier], !Equals [!Ref ExpiredLinkBehavior, delete]]
+
+Resources:
+  VMXCoreRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        !Join
+          - ''
+          - - 'VMX3-CoreRole-'
+            - !Ref ConnectInstanceAlias
+      Description: Provides foundational access to Kinesis, KVS, and CloudWatch Logs
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonKinesisReadOnlyAccess
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaKinesisExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AmazonKinesisVideoStreamsReadOnlyAccess
+
+  VMXS3RecordingsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+          !Join
+            - ''
+            - - 'vmx3-recordings-'
+              - !Ref ConnectInstanceAlias
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerPreferred
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+      LifecycleConfiguration:
+        !If
+          - AudioLifecycle
+          - Rules:
+            - Id: VMXS3DeletePolicy
+              Status: !If [AudioDelete, Enabled, Disabled]
+              ExpirationInDays: !Ref RecordingsExpireInXDays
+            - Id: VMXS3GlacierPolicy
+              Status: !If [AudioGlacier, Enabled, Disabled]
+              ExpirationInDays: 365
+              Transitions:
+              - TransitionInDays: !Ref RecordingsExpireInXDays
+                StorageClass: GLACIER
+          - Ref: 'AWS::NoValue'
+
+  VMXS3TranscriptsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+          !Join
+            - ''
+            - - 'vmx3-transcripts-'
+              - !Ref ConnectInstanceAlias
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerPreferred
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+
+  VMXAddOnPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    DependsOn:
+        - VMXCoreRole
+        - VMXS3RecordingsBucket
+        - VMXS3TranscriptsBucket
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 's3:GetObject'
+              - 's3:GetBucketTagging'
+              - 's3:GetObjectVersionTagging'
+              - 's3:GetObjectTagging'
+              - 's3:ListBucket'
+              - 's3:PutBucketTagging'
+              - 's3:PutObjectTagging'
+              - 's3:PutObjectVersionTagging'
+              - 's3:PutObject'
+              - 's3:DeleteObject'
+              - 's3:GetBucketNotification'
+              - 's3:PutBucketNotification'
+            Resource:
+              - !GetAtt VMXS3RecordingsBucket.Arn
+              - !GetAtt VMXS3TranscriptsBucket.Arn
+              - 'arn:aws:s3:::*/*'
+          - Effect: Allow
+            Action:
+              - 'logs:CreateLogGroup'
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Resource: 'arn:aws:logs:*:*:*'
+      ManagedPolicyName:
+        !Join
+          - ''
+          - - 'VMXAddOnPolicy-'
+            - !Ref ConnectInstanceAlias
+      Roles:
+        - !Ref VMXCoreRole
+
+  VMXPresignerUser:
+    Type: AWS::IAM::User
+    DependsOn:
+        - VMXAddOnPolicy
+    Properties:
+      UserName:
+        !Join
+          - ''
+          - - 'VMXPresignerUser-'
+            - !Ref ConnectInstanceAlias
+      ManagedPolicyArns:
+        - !Ref VMXAddOnPolicy
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  VMXUserKey:
+    Type: AWS::IAM::AccessKey
+    DependsOn:
+        - VMXPresignerUser
+    Properties:
+      Status: Active
+      UserName: !Ref VMXPresignerUser
+
+  VMXSecrets:
+    Type: 'AWS::SecretsManager::Secret'
+    DependsOn:
+        - VMXPresignerUser
+        - VMXUserKey
+    Properties:
+      Name:
+        !Join
+            - ''
+            - - 'VMXAccessSecrets-'
+              - !Ref ConnectInstanceAlias
+      Description: Stores user credentials for the presigner function
+      SecretString: !Sub
+        - '{"vmx_iam_key_id":"${KeyID}","vmx_iam_key_secret":"${KeySecret}"}'
+        - KeyID: !Ref VMXUserKey
+          KeySecret: !GetAtt VMXUserKey.SecretAccessKey
+
+Outputs:
+    VMXRecordingsBucket:
+      Description: Set a new event on this bucket to fire the transcriber function
+      Value: !Ref VMXS3RecordingsBucket
+    VMXRecordingsBucketArn:
+      Description: Set a new event on this bucket to fire the transcriber function
+      Value: !GetAtt VMXS3RecordingsBucket.Arn
+    VMXTranscriptsBucket:
+      Description: Set a new event on this bucket to fire the packager function
+      Value: !Ref VMXS3TranscriptsBucket
+    VMXTranscriptsBucketArn:
+      Description: Set a new event on this bucket to fire the packager function
+      Value: !GetAtt VMXS3TranscriptsBucket.Arn
+    VMXCoreRole:
+      Description: Set a new event on this bucket to fire the packager function
+      Value: !Ref VMXCoreRole
+    VMXCoreRoleArn:
+      Description: Set a new event on this bucket to fire the packager function
+      Value: !GetAtt VMXCoreRole.Arn
+    VMXSecrets:
+      Description: Secrets ID
+      Value: !Ref VMXSecrets

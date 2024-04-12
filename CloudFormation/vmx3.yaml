@@ -1,0 +1,279 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Deploys the Voicemail Express solution for Amazon Connect.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "1. Environment Configuration"
+        Parameters:
+          - AWSRegion
+          - ConnectInstanceAlias
+          - ConnectInstanceARN
+          - ConnectCTRStreamARN
+          - LambdaLoggingLevel
+      -
+        Label:
+          default: "2. Voicemail Express Retention Settings"
+        Parameters:
+          - RecordingsExpireInXDays
+          - ExpiredLinkBehavior
+      -
+        Label:
+          default: "3. Voicemail Express Test Parameters"
+        Parameters:
+          - VMTestAgentId
+          - VMTestQueueARN
+      -
+        Label:
+          default: "4. Advanced Settings (Experimental)"
+        Parameters:
+          - EXPDevBucketPrefix
+          - EXPTemplateVersion
+    ParameterLabels:
+      AWSRegion:
+        default: "Which AWS region is your Amazon Connect Instance deployed to?"
+      ConnectCTRStreamARN:
+        default: "Provide the ARN for the Amazon Kinesis Data stream configured for Contact Trace Record(CTR) streaming."
+      ConnectInstanceAlias:
+        default: "What is your Amazon Connect instance alias?"
+      ConnectInstanceARN:
+        default: "What is your Amazon Connect instance ARN (Amazon Resource Name)?"
+      EXPDevBucketPrefix:
+        default: "(TEST USE ONLY) What is the name of the bucket that holds your custom code?"
+      ExpiredLinkBehavior:
+        default: "When the recording link expires, do what do you want do with the recording?"
+      EXPTemplateVersion:
+        default: "(TEST USE ONLY) What is version you wish to deploy?"
+      LambdaLoggingLevel:
+        default: "For the included AWS Lambda functions, what should the default logging level be set to?"
+      RecordingsExpireInXDays:
+        default: "How long should the voicemail audio be available via URL? Maximum is 7 days."
+      VMTestAgentId:
+        default: "Which agent ID should we use for testing?"
+      VMTestQueueARN:
+        default: "Which queue should we use for testing?"
+
+Parameters:
+  AWSRegion:
+    Type: String
+    Default: us-east-1
+    AllowedValues:
+      - us-east-1
+      - us-west-2
+      - af-south-1
+      - ap-southeast-1
+      - ap-southeast-2
+      - ap-northeast-1
+      - ap-northeast-2
+      - ca-central-1
+      - eu-central-1
+      - eu-west-2
+    Description: All resources for this template must reside in the same region. Validate which region your Amazon Connect instance is deployed in and select the corresponding region from the drop-down list. You should run this template from this region as well.
+  ConnectCTRStreamARN:
+    Type: String
+    Default: Looks like - arn:aws:kinesis:REGION:ACCOUNT:stream/REPLACEME
+    Description: Provide the ARN for the Kinesis Data Stream that receives your contact trace records.
+  ConnectInstanceAlias:
+    Type: String
+    Default: REPLACEME
+    Description: Provide the instance alias for your Amazon Connect instance. Please use lowercase letters ONLY.
+  ConnectInstanceARN:
+    Type: String
+    Default: Looks like - arn:aws:connect:REGION:ACCOUNT:instance/REPLACEME
+    Description: Provide the instance ARN for your Amazon Connect istance.
+  EXPDevBucketPrefix:
+    Type: String
+    Default: ''
+    Description: Not required and only used for development purposes.
+  ExpiredLinkBehavior:
+    Type: String
+    Default: delete
+    AllowedValues:
+      - delete
+      - keep
+      - glacier
+    Description: When recordings expire, do you want to delete the recording, keep it, or move it to Glacier?
+  EXPTemplateVersion:
+    Type: String
+    Default: 2024.03.20
+    Description: Template version. DO NOT CHANGE.
+  LambdaLoggingLevel:
+    Type: String
+    Default: ERROR
+    AllowedValues:
+      - CRITICAL
+      - ERROR
+      - WARNING
+      - INFO
+      - DEBUG
+    Description: Default is Error. This can be changed later. Details on logging can be found at https://docs.aws.amazon.com/lambda/latest/dg/monitoring-cloudwatchlogs.html#monitoring-cloudwatchlogs-runtime-logging
+  RecordingsExpireInXDays:
+    Type: String
+    Default: 1
+    AllowedValues:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+    Description: Number of days recordings are accessible via link. This is limited 
+  VMTestAgentId:
+    Type: String
+    Default: Looks like - jdoe or jdoe@test.com
+    Description: Agent ID to use for the voicemail test function.
+  VMTestQueueARN:
+    Type: String
+    Default: Looks like - arn:aws:connect:REGION:ACCOUNT:instance/INSTANCEID/queue/QUEUEID
+    Description: We need the Queue ARN for this configuration. The Queue ARN can be found in the Amazon Connect UI by navigating to Routing > Queue, choosing the queue, then expanding the 'Show additional queue information' section.
+
+Resources:
+
+  VMXCoreStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        ConnectInstanceAlias: !Ref ConnectInstanceAlias
+        ExpiredLinkBehavior: !Ref ExpiredLinkBehavior
+        RecordingsExpireInXDays: !Ref RecordingsExpireInXDays
+      TemplateURL:
+        !Join
+        - ''
+        - - 'https://'
+          - !Ref EXPDevBucketPrefix
+          - 'connectbd-sc-'
+          - !Ref AWSRegion
+          - '.s3.'
+          - !Ref AWSRegion
+          - '.amazonaws.com/vmx3/'
+          - !Ref EXPTemplateVersion
+          - '/cloudformation/vmx3-core.yaml'
+      TimeoutInMinutes: 5
+
+  VMXContactFlowStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        ConnectInstanceAlias: !Ref ConnectInstanceAlias
+        ConnectInstanceARN: !Ref ConnectInstanceARN
+        VMTestAgentId: !Ref VMTestAgentId
+        VMTestQueueARN: !Ref VMTestQueueARN
+      TemplateURL:
+        !Join
+        - ''
+        - - 'https://'
+          - !Ref EXPDevBucketPrefix
+          - 'connectbd-sc-'
+          - !Ref AWSRegion
+          - '.s3.'
+          - !Ref AWSRegion
+          - '.amazonaws.com/vmx3/'
+          - !Ref EXPTemplateVersion
+          - '/cloudformation/vmx3-contactflows.yaml'
+      TimeoutInMinutes: 5
+
+  VMXLambdaStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - VMXCoreStack
+      - VMXContactFlowStack
+    Properties:
+      Parameters:
+        EXPTemplateVersion: !Ref EXPTemplateVersion
+        AWSRegion: !Ref AWSRegion
+        ConnectInstanceAlias: !Ref ConnectInstanceAlias
+        EXPDevBucketPrefix: !Ref EXPDevBucketPrefix
+        LambdaLoggingLevel: !Ref LambdaLoggingLevel
+        RecordingsExpireInXDays: !Ref RecordingsExpireInXDays
+        VMXDefaultTaskFlow:
+          Fn::GetAtt:
+            - VMXContactFlowStack
+            - Outputs.VMXExampleTaskFlowID
+        VMXSecrets:
+          Fn::GetAtt:
+            - VMXCoreStack
+            - Outputs.VMXSecrets
+        VMXS3RecordingsBucket:
+          Fn::GetAtt:
+            - VMXCoreStack
+            - Outputs.VMXRecordingsBucket
+        VMXS3TranscriptsBucket:
+          Fn::GetAtt:
+            - VMXCoreStack
+            - Outputs.VMXTranscriptsBucket
+        VMXCoreRole:
+          Fn::GetAtt:
+            - VMXCoreStack
+            - Outputs.VMXCoreRole
+        VMXCoreRoleArn:
+          Fn::GetAtt:
+            - VMXCoreStack
+            - Outputs.VMXCoreRoleArn
+      TemplateURL:
+        !Join
+        - ''
+        - - 'https://'
+          - !Ref EXPDevBucketPrefix
+          - 'connectbd-sc-'
+          - !Ref AWSRegion
+          - '.s3.'
+          - !Ref AWSRegion
+          - '.amazonaws.com/vmx3/'
+          - !Ref EXPTemplateVersion
+          - '/cloudformation/vmx3-lambda-functions.yaml'
+      TimeoutInMinutes: 10
+
+  VMXTriggersStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - VMXLambdaStack
+    Properties:
+      Parameters:
+        ConnectInstanceAlias: !Ref ConnectInstanceAlias
+        EXPTemplateVersion: !Ref EXPTemplateVersion
+        ConnectCTRStreamARN: !Ref ConnectCTRStreamARN
+        VMXS3RecordingsBucket:
+          Fn::GetAtt:
+            - VMXCoreStack
+            - Outputs.VMXRecordingsBucket
+        VMXS3TranscriptsBucket:
+          Fn::GetAtt:
+            - VMXCoreStack
+            - Outputs.VMXTranscriptsBucket
+        VMXS3RecordingsBucketArn:
+          Fn::GetAtt:
+            - VMXCoreStack
+            - Outputs.VMXRecordingsBucketArn
+        VMXPackagerArn:
+          Fn::GetAtt:
+            - VMXLambdaStack
+            - Outputs.VMXPackagerArn
+        VMXS3TranscriptsBucketArn:
+          Fn::GetAtt:
+            - VMXCoreStack
+            - Outputs.VMXTranscriptsBucketArn
+        VMXTranscriberArn:
+          Fn::GetAtt:
+            - VMXLambdaStack
+            - Outputs.VMXTranscriberArn
+        VMXKVStoS3:
+          Fn::GetAtt:
+            - VMXLambdaStack
+            - Outputs.VMXKVStoS3
+      TemplateURL:
+        !Join
+        - ''
+        - - 'https://'
+          - !Ref EXPDevBucketPrefix
+          - 'connectbd-sc-'
+          - !Ref AWSRegion
+          - '.s3.'
+          - !Ref AWSRegion
+          - '.amazonaws.com/vmx3/'
+          - !Ref EXPTemplateVersion
+          - '/cloudformation/vmx3-triggers.yaml'
+      TimeoutInMinutes: 10

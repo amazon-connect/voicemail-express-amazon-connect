@@ -1,0 +1,109 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Deploys the Voicemail Express content triggers.
+
+Parameters:
+  EXPTemplateVersion:
+    Type: String
+  ConnectCTRStreamARN:
+    Type: String
+  VMXS3RecordingsBucket:
+    Type: String
+  VMXS3TranscriptsBucket:
+    Type: String
+  VMXS3RecordingsBucketArn:
+    Type: String
+  VMXPackagerArn:
+    Type: String
+  VMXS3TranscriptsBucketArn:
+    Type: String
+  VMXTranscriberArn:
+    Type: String
+  VMXKVStoS3:
+    Type: String
+  ConnectInstanceAlias:
+    Type: String
+
+Resources:
+  RecordingsBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref VMXTranscriberArn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Ref VMXS3RecordingsBucketArn
+
+  TranscriptsBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref VMXPackagerArn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Ref VMXS3TranscriptsBucketArn
+
+  CTRStreamMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 10
+      Enabled: true
+      EventSourceArn: !Ref ConnectCTRStreamARN
+      FunctionName: !Ref VMXKVStoS3
+      StartingPosition: LATEST
+
+  TranscriberRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: default
+      EventPattern:
+        source:
+          - aws.s3
+        detail-type:
+          - Object Created
+        detail:
+          bucket:
+            name:
+              - !Ref VMXS3RecordingsBucket
+      Name: !Join [ "-", [ !Ref ConnectInstanceAlias,TranscriberRule ] ]
+      State: ENABLED
+      Targets:
+        - Id: !Join [ "-", [ !Ref ConnectInstanceAlias,TranscriberFunction ] ]
+          Arn: !Ref VMXTranscriberArn
+
+  TrasncriberLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref VMXTranscriberArn
+      Principal: events.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !GetAtt TranscriberRule.Arn
+
+  PackagerRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: default
+      EventPattern:
+        source:
+          - aws.s3
+        detail-type:
+          - Object Created
+        detail:
+          bucket:
+            name:
+              - !Ref VMXS3TranscriptsBucket
+      Name: !Join [ "-", [ !Ref ConnectInstanceAlias,PackagerRule ] ]
+      State: ENABLED
+      Targets: 
+        - Id: !Join [ "-", [ !Ref ConnectInstanceAlias,PackagerFunction ] ]
+          Arn: !Ref VMXPackagerArn
+          
+  PackagerLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref VMXPackagerArn
+      Principal: events.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !GetAtt PackagerRule.Arn

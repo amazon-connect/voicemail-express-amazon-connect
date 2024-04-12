@@ -1,0 +1,286 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Deploys the Voicemail Express Lambda functions.
+
+Parameters:
+  EXPTemplateVersion:
+    Type: String
+  AWSRegion:
+    Type: String
+  ConnectInstanceAlias:
+    Type: String
+  EXPDevBucketPrefix:
+    Type: String
+  LambdaLoggingLevel:
+    Type: String
+  RecordingsExpireInXDays:
+    Type: String
+  VMXDefaultTaskFlow:
+    Type: String
+  VMXSecrets:
+    Type: String
+  VMXCoreRoleArn:
+    Type: String
+  VMXCoreRole:
+    Type: String
+  VMXS3RecordingsBucket:
+    Type: String
+  VMXS3TranscriptsBucket:
+    Type: String
+
+Resources:
+  VMXPythonLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      CompatibleRuntimes:
+        - python3.11
+      Content:
+        S3Bucket:
+          !Join
+            - ''
+            - - !Ref EXPDevBucketPrefix
+              - 'connectbd-sc-'
+              - !Ref AWSRegion
+        S3Key:
+          !Join
+          - ''
+          - - 'vmx3/'
+            - !Ref EXPTemplateVersion
+            - /zip/vmx3_common_python.zip
+      Description: Provides dependencies code and functions for Python Lambda functions that augment the Service Cloud Voice offering from Salesforce
+      LayerName: !Join
+        - ''
+        - - 'common_python_layer_'
+          - !Ref ConnectInstanceAlias
+      LicenseInfo: https://aws.amazon.com/apache-2-0
+
+  VMXNodeLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      CompatibleRuntimes:
+        - nodejs18.x
+      Content:
+        S3Bucket:
+          !Join
+            - ''
+            - - !Ref EXPDevBucketPrefix
+              - 'connectbd-sc-'
+              - !Ref AWSRegion
+        S3Key:
+          !Join
+          - ''
+          - - 'vmx3/'
+            - !Ref EXPTemplateVersion
+            - /zip/vmx3_common_node.zip
+      Description: Provides dependencies code and functions for Node.js Lambda functions that augment the Service Cloud Voice offering from Salesforce
+      LayerName: !Join
+        - ''
+        - - 'common_node_layer_'
+          - !Ref ConnectInstanceAlias
+      LicenseInfo: https://aws.amazon.com/apache-2-0
+
+  VMXPresigner:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          !Join
+            - ''
+            - - !Ref EXPDevBucketPrefix
+              - 'connectbd-sc-'
+              - !Ref AWSRegion
+        S3Key:
+          !Join
+          - ''
+          - - 'vmx3/'
+            - !Ref EXPTemplateVersion
+            - /zip/vmx3_presigner.py.zip
+      Description: Generates the presigned URL that provides authenticated access to the voicemail recording in S3
+      Environment:
+        Variables:
+          aws_region:
+            Ref: AWSRegion
+          lambda_logging_level:
+            Ref: LambdaLoggingLevel
+          s3_obj_lifecycle:
+            Ref: RecordingsExpireInXDays
+          secrets_key_id:
+            Ref: VMXSecrets
+          package_version:
+            Ref: EXPTemplateVersion
+      FunctionName:
+        !Join
+            - ''
+            - - 'VMX3-Presigner-'
+              - !Ref ConnectInstanceAlias
+      Handler: vmx3_presigner.lambda_handler
+      Role: !Ref VMXCoreRoleArn
+      Runtime: python3.11
+      Timeout: 30
+
+  VMXPackager:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          !Join
+            - ''
+            - - !Ref EXPDevBucketPrefix
+              - 'connectbd-sc-'
+              - !Ref AWSRegion
+        S3Key:
+          !Join
+          - ''
+          - - 'vmx3/'
+            - !Ref EXPTemplateVersion
+            - /zip/vmx3_packager.py.zip
+      Description: Packages the voicemail and creates a task in Amazon Connect.
+      Environment:
+        Variables:
+          s3_recordings_bucket:
+            Ref: VMXS3RecordingsBucket
+          s3_transcripts_bucket:
+            Ref: VMXS3TranscriptsBucket
+          presigner_function_arn:
+            Ref: VMXPresigner
+          default_task_flow:
+            Ref: VMXDefaultTaskFlow
+          lambda_logging_level:
+            Ref: LambdaLoggingLevel
+          package_version:
+            Ref: EXPTemplateVersion
+      FunctionName:
+        !Join
+            - ''
+            - - 'VMX3-Packager-'
+              - !Ref ConnectInstanceAlias
+      Handler: vmx3_packager.lambda_handler
+      Role: !Ref VMXCoreRoleArn
+      Layers: [!Ref VMXPythonLayer]
+      Runtime: python3.11
+      Timeout: 900
+
+  VMXTranscriber:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          !Join
+            - ''
+            - - !Ref EXPDevBucketPrefix
+              - 'connectbd-sc-'
+              - !Ref AWSRegion
+        S3Key:
+          !Join
+          - ''
+          - - 'vmx3/'
+            - !Ref EXPTemplateVersion
+            - /zip/vmx3_transcriber.py.zip
+      Description: Transcribes the voicemail to text and stores the transcription in S3
+      Environment:
+        Variables:
+          aws_region:
+            Ref: AWSRegion
+          s3_transcripts_bucket:
+            Ref: VMXS3TranscriptsBucket
+          lambda_logging_level:
+            Ref: LambdaLoggingLevel
+          package_version:
+            Ref: EXPTemplateVersion
+      FunctionName:
+        !Join
+            - ''
+            - - 'VMX3-Transcriber-'
+              - !Ref ConnectInstanceAlias
+      Handler: vmx3_transcriber.lambda_handler
+      Role: !Ref VMXCoreRoleArn
+      Runtime: python3.11
+      Timeout: 900
+
+  VMXKVStoS3:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          !Join
+            - ''
+            - - !Ref EXPDevBucketPrefix
+              - 'connectbd-sc-'
+              - !Ref AWSRegion
+        S3Key:
+          !Join
+          - ''
+          - - 'vmx3/'
+            - !Ref EXPTemplateVersion
+            - /zip/vmx3_kvs_to_s3.js.zip
+      Description: Extracts the voicemail from the KVS stream and writes it to S3 with tag data
+      Environment:
+        Variables:
+          aws_region:
+            Ref: AWSRegion
+          s3_recordings_bucket:
+            Ref: VMXS3RecordingsBucket
+          lambda_logging_level:
+            Ref: LambdaLoggingLevel
+          package_version:
+            Ref: EXPTemplateVersion
+      FunctionName:
+        !Join
+            - ''
+            - - 'VMX3-KVStoS3-'
+              - !Ref ConnectInstanceAlias
+      Handler: vmx3_kvs_to_s3.handler
+      Role: !Ref VMXCoreRoleArn
+      Layers: [!Ref VMXNodeLayer]
+      Runtime: nodejs18.x
+      Timeout: 900
+
+  VMXAddOnPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    DependsOn:
+        - VMXPresigner
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'lambda:InvokeFunction'
+            Resource:
+              - !GetAtt VMXPresigner.Arn
+          - Effect: Allow
+            Action:
+              - 'transcribe:StartTranscriptionJob'
+              - 'transcribe:DeleteTranscriptionJob'
+              - 'connect:DescribeUser'
+              - 'connect:UpdateContactAttributes'
+              - 'connect:GetContactAttributes'
+              - 'connect:DescribeQueue'
+              - 'connect:StartTaskContact'
+            Resource:
+              - '*'
+          - Effect: Allow
+            Action:
+              - 'secretsmanager:GetSecretValue'
+              - 'secretsmanager:DescribeSecret'
+              - 'secretsmanager:ListSecretVersionIds'
+            Resource:
+              - !Ref VMXSecrets
+      ManagedPolicyName:
+        !Join
+          - ''
+          - - 'VMXCorePolicy-'
+            - !Ref ConnectInstanceAlias
+      Roles:
+        - !Ref VMXCoreRole
+
+Outputs:
+  VMXPackagerArn:
+    Description: ARN of the Packager function
+    Value: !GetAtt VMXPackager.Arn
+  VMXTranscriberArn:
+    Description: ARN of the Transcriber function
+    Value: !GetAtt VMXTranscriber.Arn
+  VMXKVStoS3:
+    Description: Name of the KVS to S3 function
+    Value: !Ref VMXKVStoS3
