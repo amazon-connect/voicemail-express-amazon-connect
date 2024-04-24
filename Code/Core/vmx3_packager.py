@@ -147,7 +147,7 @@ def lambda_handler(event, context):
         try:
             entity_name = get_queue_details['Queue']['Name']
             entity_id = get_queue_details['Queue']['QueueArn']
-            entity_description = get_queue_details['Queue']['Description']
+            entity_description = 'Amazon Connect Queue'
         except Exception as e:
             logger.error(e)
             logger.error('Record Result: Failed to extract queue name')
