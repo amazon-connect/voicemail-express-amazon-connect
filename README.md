@@ -35,16 +35,22 @@ To remove Voicemail Express follow the instructions below:
 Finally, some basic troubleshooting steps can be found on the [Troubleshooting Common Voicemail Issues](Docs/vmx_troubleshooting.md) page.
 
 ## Roadmap
-The following items are planned for future releases
--  Optional delivery mode add-ins: Allows you to add additional delivery modes as desired. The first batch of delivery modes will be:
-   -  Salesforce Case
-   -  Salesforce custom objects
-   -  Email via SES
--  Update KVStoS3 function to Python
--  Update python version to 3.12
--  Reduce layer size for default deployments
--  Reduce complexity and number of functions
--  Agent queue check to make sure there are not too many contacts in queue.
+The following items are currently planned for future releases. Changes to roadmap depend on feedback, however one overarching tenent of VocieMail Express is to keep the solution lightweight, with a minimal number of required services and administration. 
+-  **1H2024**
+   -  Optional delivery mode add-ins: Allows you to add additional delivery modes as desired. The first batch of delivery modes will be:
+      -  Email via SES
+      -  Salesforce Case
+      -  Salesforce custom objects
+   -  Update KVStoS3 function to Python
+   -  Update python version to 3.12
+   -  Example flows
+   -  Notification Option
+-  **2h2024**
+   -  Reduce layer size for default deployments
+   -  Reduce complexity and number of functions
+   -  GenAI summary option
+   -  Support for GitHub sync
+      
 
 **Current Published Version:** 2024.03.20
 Current published version is the version of the code and templates that has been deployed to our S3 buckets
