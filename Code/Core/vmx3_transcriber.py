@@ -1,4 +1,4 @@
-# Version: 2024.03.20
+# Version: 2024.05.01
 """
 **********************************************************************************************************************
  *  Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -78,7 +78,7 @@ def lambda_handler(event, context):
 
         # Submit the transcription job
         transcribe_response = transcribe_client.start_transcription_job(
-            TranscriptionJobName=contact_id + '_' + str(round(time.time())),
+            TranscriptionJobName='vmx3_' + contact_id + '_' + str(round(time.time())),
             LanguageCode=loaded_tags['vmx3_lang'],
             MediaFormat='wav',
             Media={

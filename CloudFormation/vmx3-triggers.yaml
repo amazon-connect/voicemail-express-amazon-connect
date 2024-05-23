@@ -23,6 +23,8 @@ Parameters:
     Type: String
   ConnectInstanceAlias:
     Type: String
+  VMXTranscribeErrorArn:
+    Type: String
 
 Resources:
   RecordingsBucketPermission:
@@ -107,3 +109,32 @@ Resources:
       Principal: events.amazonaws.com
       SourceAccount: !Ref 'AWS::AccountId'
       SourceArn: !GetAtt PackagerRule.Arn
+
+  TranscribeErrorRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: default
+      EventPattern: {
+          "source": ["aws.transcribe"],
+          "detail-type": ["Transcribe Job State Change"],
+          "detail": {
+            "TranscriptionJobName": [{
+              "prefix": "vmx3_"
+            }],
+            "TranscriptionJobStatus": ["FAILED"]
+          }
+        }
+      Name: !Join [ "-", [ !Ref ConnectInstanceAlias,TranscribeErrorRule ] ]
+      State: ENABLED
+      Targets: 
+        - Id: !Join [ "-", [ !Ref ConnectInstanceAlias,TranscribeErrorFunction ] ]
+          Arn: !Ref VMXTranscribeErrorArn
+  
+  TranscriberErrorLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref VMXTranscribeErrorArn
+      Principal: events.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !GetAtt TranscribeErrorRule.Arn

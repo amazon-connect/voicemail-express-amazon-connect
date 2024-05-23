@@ -1,4 +1,4 @@
-# Version: 2024.03.20
+# Version: 2024.05.01
 """
 **********************************************************************************************************************
  *  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -38,9 +38,12 @@ def lambda_handler(event, context):
     # Establish writer data
     writer_payload = {}
 
-    # Establish data for transcript and recording
+    # Establish data for transcript and recording, and clear out write tests.
     try:
-        transcript_key = event['detail']['object']['key']
+        original_transcript_key = event['detail']['object']['key']
+        if original_transcript_key == '.write_access_check_file.temp':
+            return('**********WRITE TEST - IGNORE**********')
+        transcript_key = original_transcript_key[5:]
         transcript_job = transcript_key.replace('.json','')
         contact_id = transcript_job.split('_',1)[0]
         recording_key = contact_id + '.wav'
@@ -97,7 +100,7 @@ def lambda_handler(event, context):
     try:
         s3_resource = boto3.resource('s3')
 
-        transcript_object = s3_resource.Object(transcript_bucket, transcript_key)
+        transcript_object = s3_resource.Object(transcript_bucket, original_transcript_key)
         file_content = transcript_object.get()['Body'].read().decode('utf-8')
         json_content = json.loads(file_content)
 
@@ -209,7 +212,7 @@ def lambda_handler(event, context):
     try:
         transcribe_client = boto3.client('transcribe')
         transcribe_client.delete_transcription_job(
-            TranscriptionJobName=transcript_job
+            TranscriptionJobName=original_transcript_key.replace('.json','')
         )
 
     except Exception as e:
