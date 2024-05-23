@@ -3,13 +3,12 @@ Voicemail Express is designed to provide basic voicemail functionality to Amazon
 
 ![Voicemail Express Architecture](Docs/Img/VMX3.png)
 
-## What's new in VMX3 (2024.03.20)
--  Simplified deployment process.
--  Removed Salesforce-centric deployment options.
--  All voicemails are delivered as Amazon Connect tasks. The option to add other deliver modes will come in a future release. 
--  An Amazon Connect flow module named **VMX3VoicemailCoreModule** is provided. This provides a standard voicemail experience, sets all required attributes, and records the voicemail. You can use this module in any standard Amazon Connect inbound contact flow to provide the voicemail experience without needing to create a custom flow.
--  The VMX3TestFlow has been modified to use the **VMX3VoicemailCoreModule**.
--  Modified transcribe job name to eliminate conflicts.
+## What's new in VMX3 (2024.05.01)
+-  Resolved an edge case that could allow a voicemail task to be duplicated
+-  Resolved an issue where corrupted or invalid audio files would cause the transcription to fail, resulting in a lost voicemail
+-  Added new messaging to identify KVS startup issues on first run, and to hopefully resolve them
+-  Upgraded all Python functions to 3.12
+-  Reduced the layer size for the Python layer
 
 ### How it works
 With Voicemail Express, customers can have the option to leave a voicemail for an agent or queue. Once the voicemail is recorded, a series of processes take place in the following order:
@@ -24,6 +23,9 @@ Voicemails are configured for a retention period of up to 7 days. After 7 days, 
 To deploy Voicemail Express, you will need to complete the following:
 1. Complete the [Voicemail Express Prerequisites](Docs/vmx_prerequistes.md)
 1. Complete the [Voicemail Express Installation](Docs/vmx_installation_instructions.md)
+
+### How to upgrade
+To upgrade Voicemail Express, follow the [Upgrade Your Installation](Docs/vmx_upgrade.md) instructions.
 
 ### About Voicemail Express
 Once Voicemail Express has been deployed, you can learn more about it by reading the [High-level overview of the Voicemail Express solution](Docs/vmx_core.md).
@@ -42,7 +44,6 @@ The following items are currently planned for future releases. Changes to roadma
       -  Salesforce Case
       -  Salesforce custom objects
    -  Update KVStoS3 function to Python
-   -  Update python version to 3.12
    -  Example flows
    -  Notification Option
 -  **2h2024**
@@ -52,5 +53,5 @@ The following items are currently planned for future releases. Changes to roadma
    -  Support for GitHub sync
       
 
-**Current Published Version:** 2024.03.20
+**Current Published Version:** 2024.05.01
 Current published version is the version of the code and templates that has been deployed to our S3 buckets

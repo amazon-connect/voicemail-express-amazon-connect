@@ -115,7 +115,7 @@ Resources:
               - !Ref ConnectInstanceAlias
       Handler: vmx3_presigner.lambda_handler
       Role: !Ref VMXCoreRoleArn
-      Runtime: python3.11
+      Runtime: python3.12
       Timeout: 30
 
   VMXPackager:
@@ -157,7 +157,7 @@ Resources:
       Handler: vmx3_packager.lambda_handler
       Role: !Ref VMXCoreRoleArn
       Layers: [!Ref VMXPythonLayer]
-      Runtime: python3.11
+      Runtime: python3.12
       Timeout: 900
 
   VMXTranscriber:
@@ -194,7 +194,7 @@ Resources:
               - !Ref ConnectInstanceAlias
       Handler: vmx3_transcriber.lambda_handler
       Role: !Ref VMXCoreRoleArn
-      Runtime: python3.11
+      Runtime: python3.12
       Timeout: 900
 
   VMXKVStoS3:
@@ -234,6 +234,43 @@ Resources:
       Layers: [!Ref VMXNodeLayer]
       Runtime: nodejs18.x
       Timeout: 900
+
+  VMXTranscribeErrorHandler:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          !Join
+            - ''
+            - - !Ref EXPDevBucketPrefix
+              - 'connectbd-sc-'
+              - !Ref AWSRegion
+        S3Key:
+          !Join
+          - ''
+          - - 'vmx3/'
+            - !Ref EXPTemplateVersion
+            - /zip/vmx3_transcription_error_handler.py.zip
+      Description: Catches transcription errors due to corrupt wav files and provides a notification transcript so that processing completes
+      Environment:
+        Variables:
+          aws_region:
+            Ref: AWSRegion
+          s3_transcripts_bucket:
+            Ref: VMXS3TranscriptsBucket
+          lambda_logging_level:
+            Ref: LambdaLoggingLevel
+          package_version:
+            Ref: EXPTemplateVersion
+      FunctionName:
+        !Join
+            - ''
+            - - 'VMX3-TranscribeErrorHandler-'
+              - !Ref ConnectInstanceAlias
+      Handler: vmx3_transcription_error_handler.lambda_handler
+      Role: !Ref VMXCoreRoleArn
+      Runtime: python3.12
+      Timeout: 30
 
   VMXAddOnPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -284,3 +321,6 @@ Outputs:
   VMXKVStoS3:
     Description: Name of the KVS to S3 function
     Value: !Ref VMXKVStoS3
+  VMXTranscribeErrorArn:
+    Description: ARN of the transcribe error handler function
+    Value: !GetAtt VMXTranscribeErrorHandler.Arn
