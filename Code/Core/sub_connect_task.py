@@ -34,11 +34,12 @@ def vmx_to_connect_task(writer_payload):
     logger.debug(writer_payload)
 
     # Check for a task flow to use, if not, use default
-    if 'vmx_task_flow' in writer_payload['json_attributes']:
+    if 'vmx3_task_flow' in writer_payload['json_attributes']:
         if writer_payload['json_attributes']['vmx3_task_flow']:
             contact_flow = writer_payload['json_attributes']['vmx3_task_flow']
         else:
-            writer_payload.update({'task_flow':os.environ['default_task_flow']})
+            writer_payload.update({'vmx3_task_flow':os.environ['default_task_flow']})
+            contact_flow = os.environ['default_task_flow']
 
     else:
         contact_flow = os.environ['default_task_flow']
