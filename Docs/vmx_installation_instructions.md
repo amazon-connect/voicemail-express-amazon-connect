@@ -16,7 +16,7 @@ Once you have the required information, you are ready to continue with the deplo
 
 ## Delploy the Cloudformation Template
 The next step is to deploy the CloudFormation template. This template builds all of the AWS resources required to make Voicemail Express work.
-1.  Log into the [AWS console](https://console.aws.amazon.com/console/home). Be sure to set your region to match the region you have deployed Amazon Connect to, then return here.
+1.  Open a new broser tab and then log into the [AWS console](https://console.aws.amazon.com/console/home). Be sure to set your region to match the region you have deployed Amazon Connect to, then return here.
 1.  Select the link below that matches your region to launch the template:
     - us-east-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=VMX3&templateURL=https://connectbd-sc-us-east-1.s3.us-east-1.amazonaws.com/vmx3/2024.06.01/cloudformation/vmx3.yaml)
     - us-west-2 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=VMX3&templateURL=https://connectbd-sc-us-west-2.s3.us-west-2.amazonaws.com/vmx3/2024.06.01/cloudformation/vmx3.yaml)

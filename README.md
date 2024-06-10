@@ -8,7 +8,7 @@ Voicemail Express is designed to provide basic voicemail functionality to Amazon
 -  Kinesis Data Stream filtering for records to reduce Lambda invocations
 -  Added Voicemail date/time info to the task (based on work by [DanBloy](https://github.com/DanBloy))
 -  Updated flow naming for consistency
--  Additional load testing
+-  Additional load testing completed
 
 ### How it works
 With Voicemail Express, customers can have the option to leave a voicemail for an agent or queue. Once the voicemail is recorded, a series of processes take place in the following order:
