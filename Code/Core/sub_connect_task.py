@@ -1,4 +1,4 @@
-# Version: 2024.05.01
+# Version: 2024.06.01
 """
 **********************************************************************************************************************
  *  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -46,12 +46,22 @@ def vmx_to_connect_task(writer_payload):
     try:
         create_task = connect_client.start_task_contact(
             InstanceId=writer_payload['instance_id'],
-            PreviousContactId=writer_payload['contact_id'],
             ContactFlowId=contact_flow,
-            Attributes=writer_payload['json_attributes'],
+            PreviousContactId=writer_payload['contact_id'],
+            Attributes={
+                'Callback_Number': writer_payload['json_attributes']['callback_number']
+            },
             Name='Voicemail for ' + writer_payload['json_attributes']['entity_name'],
             References={
-                'Click link below to play voicemail': {
+                'Date Voicemail Received': {
+                    'Value': writer_payload['json_attributes']['vmx3_dateTime'],
+                    'Type': 'STRING'
+                },
+                'Original Queue': {
+                    'Value': writer_payload['json_attributes']['entity_name'],
+                    'Type':'STRING'
+                },
+                'Select link below to play voicemail recording': {
                     'Value': writer_payload['json_attributes']['presigned_url'],
                     'Type': 'URL'
                 }

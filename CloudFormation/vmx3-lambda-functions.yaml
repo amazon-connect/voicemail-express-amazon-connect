@@ -28,6 +28,30 @@ Parameters:
   VMXS3TranscriptsBucket:
     Type: String
 
+Mappings:
+  TZInfo:
+    us-east-1:
+      'TZ': 'America/New_York'
+    us-west-2:
+      'TZ': 'America/Los_Angeles'
+    af-south-1:
+      'TZ': 'Africa/Johannesburg'
+    ap-southeast-1:
+      'TZ': 'Asia/Singapore'
+    ap-southeast-2:
+      'TZ': 'Australia/Sydney'
+    ap-northeast-1:
+      'TZ': 'Asia/Tokyo'
+    ap-northeast-2:
+      'TZ': 'Asia/Seoul'
+    ca-central-1:
+      'TZ': 'Canada/Central'
+    eu-central-1:
+      'TZ': 'Europe/Berlin'
+    eu-west-2:
+      'TZ': 'Europe/London'
+
+
 Resources:
   VMXPythonLayer:
     Type: AWS::Lambda::LayerVersion
@@ -149,6 +173,8 @@ Resources:
             Ref: LambdaLoggingLevel
           package_version:
             Ref: EXPTemplateVersion
+          TZ:
+            Ref: !FindInMap [TZInfo, !Ref AWSRegion, TZ]
       FunctionName:
         !Join
             - ''
