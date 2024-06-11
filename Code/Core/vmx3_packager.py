@@ -1,4 +1,4 @@
-# Version: 2024.05.01
+# Version: 2024.06.01
 """
 **********************************************************************************************************************
  *  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -22,6 +22,7 @@ import os
 import logging
 import boto3
 import phonenumbers
+from datetime import datetime
 
 # Import the VMX Model Type
 import sub_connect_task
@@ -156,6 +157,10 @@ def lambda_handler(event, context):
             logger.error('Record Result: Failed to extract queue name')
             entity_name = 'UNKNOWN'
 
+    # Get the current date and time in UTC using timezone-aware objects
+    current_datetime = datetime.now()
+    formatted_datetime = current_datetime.strftime("%A, %b %d at %I:%M %p (Instance Time)")
+
     # Get the existing contact attributes from the call and append the standard vars for voicemail to the attributes
     try:
         contact_attributes = connect_client.get_contact_attributes(
@@ -163,7 +168,7 @@ def lambda_handler(event, context):
             InitialContactId = contact_id
         )
         json_attributes = contact_attributes['Attributes']
-        json_attributes.update({'entity_name':entity_name,'entity_id':entity_id,'entity_description':entity_description,'transcript_contents':transcript_contents,'callback_number':json_attributes['vmx3_from'],'presigned_url':raw_url})
+        json_attributes.update({'entity_name':entity_name,'entity_id':entity_id,'entity_description':entity_description,'transcript_contents':transcript_contents,'callback_number':json_attributes['vmx3_from'],'presigned_url':raw_url,'vmx3_dateTime': formatted_datetime})
         writer_payload.update({'json_attributes':json_attributes})
         contact_attributes = json.dumps(contact_attributes['Attributes'])
 

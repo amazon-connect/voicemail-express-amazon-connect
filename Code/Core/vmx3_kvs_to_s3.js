@@ -1,4 +1,4 @@
-// Version: 2024.05.01
+// Version: 2024.06.01
 /*
  **********************************************************************************************************************
  *  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -15,41 +15,41 @@
  *  IN THE SOFTWARE.                                                                                                  *
  **********************************************************************************************************************
  */
- 
+
 // Establish constants and globals
-const {Decoder} = require('ebml');
+const { Decoder } = require('ebml');
 const AWS = require('aws-sdk');
 const s3 = new AWS.S3();
 const BUCKET_NAME = process.env.s3_recordings_bucket;
 const AUDIO_MIME_TYPE = 'audio/x-wav';
 
 /* function that returns a promise to wait until the stream is done writing to the S3 bucket because tries to reduce the init time lambda runs the same function that was already in memory or container.*/
-let streamFinished = false
-const done  = () => {
-    return new Promise ((resolve, reject) => {
+let streamFinished = false;
+const done = () => {
+    return new Promise((resolve, reject) => {
         var checkFinished = () => {
-            if(streamFinished) {
-                console.log('finished')
-                resolve()
+            if (streamFinished) {
+                console.log('finished');
+                resolve();
             } else {
-                console.log('not finished, waiting 500 ms...')
-                setTimeout(checkFinished, 500)
+                console.log('not finished, waiting 500 ms...');
+                setTimeout(checkFinished, 500);
             }
-        }
-        setTimeout(checkFinished, 500)
-    })
+        };
+        setTimeout(checkFinished, 500);
+    });
 };
 
 var decoder;
 var wavBufferArray = [];
 var wavOutputStream;
 
-var kinesisvideo = new AWS.KinesisVideo({region: process.env.aws_region});
-var kinesisvideomedia = new AWS.KinesisVideoMedia({region: process.env.aws_region});
+var kinesisvideo = new AWS.KinesisVideo({ region: process.env.aws_region });
+var kinesisvideomedia = new AWS.KinesisVideoMedia({ region: process.env.aws_region });
 
 exports.handler = async (event) => {
     // Uncomment the following line for debugging
-    console.log('Event Received ==>', JSON.stringify(event, null, 2))
+    //console.log('Event Received ==>', JSON.stringify(event, null, 2));
 
     // Establish a response container
     var responseContainer = {};
@@ -58,8 +58,20 @@ exports.handler = async (event) => {
     var totalRecordCount = 0;
     var processedRecordCount = 0;
 
-    // Process incoming records
-    for (const record of event.Records) {
+    // Process incoming records one by one
+    console.log('event.Records.length value: ' + event.Records.length);
+    for (let i = 0; i < event.Records.length; i++) {
+        const record = event.Records[i];
+        //uncomment the lines below for debugging:
+        //console.log('record: ' + i);
+        //console.log(JSON.stringify(record));
+        
+        //async process records to ensure they don't overlap. 
+        //running multiple simultaneously was causing contention.
+        await processRecord(record, i, totalRecordCount, processedRecordCount, responseContainer);
+    }
+
+    async function processRecord(record, i, totalRecordCount, processedRecordCount, responseContainer) {
         let shouldProcessKvs = true;
         let currentTagName = '';
         let currentTagString = '';
@@ -67,8 +79,8 @@ exports.handler = async (event) => {
 
 
         // Increment record counter
-        totalRecordCount = totalRecordCount + 1
-        console.log('Starting record #' + totalRecordCount)
+        totalRecordCount = i;
+        console.log('Starting record #' + totalRecordCount);
 
         // Grab the data from the event for the record, decode it, grab the attributes we need, and check if this is a voicemail to process
         try {
@@ -79,10 +91,9 @@ exports.handler = async (event) => {
             // console.log(vmrecord)
             // Grab ContactID & Instance ARN
             var currentContactID = vmrecord.ContactId;
-        } catch(e) {
+        } catch (e) {
             console.log('FAIL: Record extraction failed');
             responseContainer['record' + totalRecordCount + 'result'] = 'Failed to extract record and/or decode';
-            continue;
         };
 
         // Check for the positive vmx3_flag attribute so we know that this is a vm to process
@@ -91,18 +102,15 @@ exports.handler = async (event) => {
             if (vmx3_flag == '0') {
                 responseContainer['record ' + totalRecordCount + 'result'] = ' ContactID: ' + currentContactID + ' - IGNORE - voicemail already processed';
                 processedRecordCount = processedRecordCount + 1;
-                continue;
             } else if (vmx3_flag == '1') {
-                console.log('Record #' + totalRecordCount  + ' ContactID: ' + currentContactID + ' -  is a voicemail - begin processing.')
+                console.log('Record #' + totalRecordCount + ' ContactID: ' + currentContactID + ' -  is a voicemail - begin processing.')
             } else {
                 responseContainer['record' + totalRecordCount + 'result'] = ' ContactID: ' + currentContactID + ' - IGNORE - voicemail flag not valid';
                 processedRecordCount = processedRecordCount + 1;
-                continue;
             }
-        } catch(e) {
+        } catch (e) {
             responseContainer['record' + totalRecordCount + 'result'] = ' ContactID: ' + currentContactID + ' - IGNORE - Some other bad thing happened with the attribute comparison.';
             processedRecordCount = processedRecordCount + 1;
-            continue;
         };
 
         // Grab kvs stream data
@@ -111,10 +119,9 @@ exports.handler = async (event) => {
             var startFragmentNum = BigInt(vmrecord.Recordings[0].FragmentStartNumber);
             var stopFragmentNum = BigInt(vmrecord.Recordings[0].FragmentStopNumber);
             var streamName = vmrecord.Recordings[0].Location.substring(streamARN.indexOf("/") + 1, streamARN.lastIndexOf("/"));
-        } catch(e) {
+        } catch (e) {
             console.log('FAIL: Counld not identify KVS info');
             responseContainer['record' + totalRecordCount + 'result'] = 'Failed to extract KVS info';
-            continue;
         };
 
         // Iterate through the attributes to get the tags
@@ -122,15 +129,14 @@ exports.handler = async (event) => {
             var attr_data = vmrecord.Attributes;
             var attr_tag_container = '';
             Object.keys(attr_data).forEach(function (key) {
-                if (key.startsWith('vmx3_lang')||key.startsWith('vmx3_queue_arn')){
+                if (key.startsWith('vmx3_lang') || key.startsWith('vmx3_queue_arn')) {
                     attr_tag_container = attr_tag_container + ('' + key + '=' + attr_data[key] + '&');
                 };
             });
             attr_tag_container = attr_tag_container.replace(/&\s*$/, '');
-        } catch(e) {
+        } catch (e) {
             console.log('FAIL: Counld not extract vm tags');
             responseContainer['record' + totalRecordCount + 'result'] = 'Failed to extract vm tags';
-            continue;
         }
 
         // Process audio and write to S3
@@ -147,7 +153,7 @@ exports.handler = async (event) => {
                  *
                  */
 
-                const {name, value} = chunk[1];
+                const { name, value } = chunk[1];
 
                 //console.log(`Examining a chunk named: ${name}`);
 
@@ -257,10 +263,9 @@ exports.handler = async (event) => {
             //waiting until the recorded stream
             await done();
 
-        } catch(e) {
+        } catch (e) {
             //console.log('FAIL: Counld write audio to S3');
             responseContainer['record' + totalRecordCount + 'result'] = ' ContactID: ' + currentContactID + ' -  Failed to write audio to S3';
-            continue;
         }
     };
 

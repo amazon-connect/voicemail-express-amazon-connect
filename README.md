@@ -3,12 +3,12 @@ Voicemail Express is designed to provide basic voicemail functionality to Amazon
 
 ![Voicemail Express Architecture](Docs/Img/VMX3.png)
 
-## What's new in VMX3 (2024.05.01)
--  Resolved an edge case that could allow a voicemail task to be duplicated
--  Resolved an issue where corrupted or invalid audio files would cause the transcription to fail, resulting in a lost voicemail
--  Added new messaging to identify KVS startup issues on first run, and to hopefully resolve them
--  Upgraded all Python functions to 3.12
--  Reduced the layer size for the Python layer
+## What's new in VMX3 (2024.06.01)
+-  Improved performance of the KVStoS3 function
+-  Kinesis Data Stream filtering for records to reduce Lambda invocations
+-  Added Voicemail date/time info to the task (based on work by [DanBloy](https://github.com/DanBloy))
+-  Updated flow attribute naming for consistency
+-  Additional load testing completed
 
 ### How it works
 With Voicemail Express, customers can have the option to leave a voicemail for an agent or queue. Once the voicemail is recorded, a series of processes take place in the following order:
@@ -53,5 +53,5 @@ The following items are currently planned for future releases. Changes to roadma
    -  Support for GitHub sync
       
 
-**Current Published Version:** 2024.05.01
+**Current Published Version:** 2024.06.01
 Current published version is the version of the code and templates that has been deployed to our S3 buckets

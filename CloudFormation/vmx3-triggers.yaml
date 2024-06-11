@@ -53,6 +53,9 @@ Resources:
       EventSourceArn: !Ref ConnectCTRStreamARN
       FunctionName: !Ref VMXKVStoS3
       StartingPosition: LATEST
+      FilterCriteria:
+        Filters:
+          - Pattern: "{\"data\": {\"Attributes\": {\"vmx3_flag\": [\"1\"]}}}"
 
   TranscriberRule:
     Type: AWS::Events::Rule
