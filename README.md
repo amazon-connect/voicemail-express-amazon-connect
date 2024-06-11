@@ -7,7 +7,7 @@ Voicemail Express is designed to provide basic voicemail functionality to Amazon
 -  Improved performance of the KVStoS3 function
 -  Kinesis Data Stream filtering for records to reduce Lambda invocations
 -  Added Voicemail date/time info to the task (based on work by [DanBloy](https://github.com/DanBloy))
--  Updated flow naming for consistency
+-  Updated flow attribute naming for consistency
 -  Additional load testing completed
 
 ### How it works
