@@ -11,7 +11,7 @@ With Voicemail Express, customers can have the option to leave a voicemail for a
 1. Voicemail stored in S3 as a .wav file
 2. Transcription of the voicemail
 3. Presigned URL that provides access to the voicemail without the need for authentication into the AWS account hosting Amazon Connect.
-4. Voicemail is packaged for delivery, including the transcription, presigned URL, and contact data. It is then delivered as an Amazon Connect Task.
+4. Voicemail is packaged for delivery, including the transcription, presigned URL, and contact data. It is then delivered as an Amazon Connect Task or via email using Amazon Simple Email Service (SES).
 
 Voicemails are configured for a retention period of up to 7 days. After 7 days, the recordings are the presigned URL is no longer valid, and the recordings are lifecycled. During deployment, you have the option to configre the lifecycle window, if desired. Additionally, you have the option to keep, archive, or delete voicemail recordings. 
 
@@ -33,7 +33,7 @@ To remove Voicemail Express follow the instructions below:
 Finally, some basic troubleshooting steps can be found on the [Troubleshooting Common Voicemail Issues](Docs/vmx_troubleshooting.md) page.
 
 ## Roadmap
-The following items are currently planned for future releases. Changes to roadmap depend on feedback, however one overarching tenent of VocieMail Express is to keep the solution lightweight, with a minimal number of required services and administration. 
+The following items are currently planned for future releases. Changes to roadmap depend on feedback, however one overarching tenent of VocieMail Express is to keep the solution lightweight, with a minimal number of required services and administration, and to replace funcitonality with Native Amazon Connect features as soon as they become available. 
 -  **Jul-Sep 2024**
    -  Update KVStoS3 function to Python
    -  Example flows
