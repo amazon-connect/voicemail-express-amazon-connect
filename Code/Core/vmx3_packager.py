@@ -1,7 +1,7 @@
-# Version: 2024.06.01
+# Version: 2024.07.01
 """
 **********************************************************************************************************************
- *  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
+ *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
  *                                                                                                                    *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated      *
  *  documentation files (the "Software"), to deal in the Software without restriction, including without limitation   *
@@ -24,8 +24,9 @@ import boto3
 import phonenumbers
 from datetime import datetime
 
-# Import the VMX Model Type
+# Import the VMX Model Types
 import sub_connect_task
+import sub_ses_email
 
 # Establish logging configuration
 logger = logging.getLogger()
@@ -152,9 +153,10 @@ def lambda_handler(event, context):
             entity_name = get_queue_details['Queue']['Name']
             entity_id = get_queue_details['Queue']['QueueArn']
             entity_description = 'Amazon Connect Queue'
+            
         except Exception as e:
             logger.error(e)
-            logger.error('Record Result: Failed to extract queue name')
+            logger.error('Record Result: Failed to extract queue details')
             entity_name = 'UNKNOWN'
 
     # Get the current date and time in UTC using timezone-aware objects
@@ -192,12 +194,37 @@ def lambda_handler(event, context):
     if vmx3_mode == 'task':
 
         try:
-            write_vm = sub_connect_task.vmx_to_connect_task(writer_payload)
+            write_vm = sub_connect_task.vmx3_to_connect_task(writer_payload)
 
         except Exception as e:
             logger.error(e)
             logger.error('Failed to activate task function')
             return {'result':'Failed to activate task function'}
+    elif vmx3_mode == 'email':
+
+        # Define the appropriate email target
+        if writer_payload['entity_type'] == 'agent':
+            try:
+                entity_email = get_agent['User']['IdentityInfo']['Email']
+            except: 
+                entity_email = os.environ['default_email_target']
+
+        else:
+            try:
+                entity_email = get_queue_details['Queue']['Tags']['vmx3_queue_email']
+            except: 
+                entity_email = os.environ['default_email_target']
+
+        writer_payload.update({'entity_email':entity_email})
+
+        try:
+            write_vm = sub_ses_email.vmx3_to_ses_email(writer_payload)
+
+        except Exception as e:
+            logger.error(e)
+            logger.error('Failed to activate email function')
+            return {'result':'Failed to activate email function'}
+
 
     else:
         logger.error('Invalid mode selection')

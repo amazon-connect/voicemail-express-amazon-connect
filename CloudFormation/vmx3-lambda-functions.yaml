@@ -9,11 +9,25 @@ Parameters:
     Type: String
   ConnectInstanceAlias:
     Type: String
+  EnableVMToConnectTask:
+    Type: String
+  EnableVMToEmail:
+    Type: String
   EXPDevBucketPrefix:
     Type: String
   LambdaLoggingLevel:
     Type: String
   RecordingsExpireInXDays:
+    Type: String
+  VMEmailDefaultAgentTemplate:
+    Type: String
+  VMEmailDefaultQueueTemplate:
+    Type: String
+  VMDefaultMode:
+    Type: String
+  VMToEmailDefaultFrom:
+    Type: String
+  VMToEmailDefaultTo:
     Type: String
   VMXDefaultTaskFlow:
     Type: String
@@ -50,7 +64,15 @@ Mappings:
       TZvalue: 'Europe/Berlin'
     eu-west-2:
       TZvalue: 'Europe/London'
+  VMModes:
+    AmazonConnectTask:
+      mode: task
+    AmazonSimpleEmailService:
+      mode: email
 
+Conditions:
+  ConnectTasksEnabled: !Equals [!Ref EnableVMToConnectTask, yes]
+  AWSEmailEnabled: !Equals [!Ref EnableVMToEmail, yes]
 
 Resources:
   VMXPythonLayer:
@@ -168,13 +190,23 @@ Resources:
           presigner_function_arn:
             Ref: VMXPresigner
           default_task_flow:
-            Ref: VMXDefaultTaskFlow
+            !If [ConnectTasksEnabled, !Ref VMXDefaultTaskFlow, 'AWS::NoValue']
           lambda_logging_level:
             Ref: LambdaLoggingLevel
           package_version:
             Ref: EXPTemplateVersion
           TZ:
             !FindInMap [TZInfo, !Ref "AWS::Region", TZvalue]
+          default_email_from:
+            !If [AWSEmailEnabled, !Ref VMToEmailDefaultFrom, 'AWS::NoValue']
+          default_email_target:
+            !If [AWSEmailEnabled, !Ref VMToEmailDefaultTo, 'AWS::NoValue']
+          default_vmx_mode:
+            !FindInMap [VMModes, !Ref "VMDefaultMode", mode]
+          default_agent_email_template:
+            !If [AWSEmailEnabled, !Ref VMEmailDefaultAgentTemplate, 'AWS::NoValue']
+          default_queue_email_template:
+            !If [AWSEmailEnabled, !Ref VMEmailDefaultQueueTemplate, 'AWS::NoValue']
       FunctionName:
         !Join
             - ''
