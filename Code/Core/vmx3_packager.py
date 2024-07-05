@@ -186,7 +186,7 @@ def lambda_handler(event, context):
         if writer_payload['json_attributes']['vmx3_mode']:
             vmx3_mode = writer_payload['json_attributes']['vmx3_mode']
     else:
-        vmx3_mode = 'task' 
+        vmx3_mode = os.environ['default_vmx_mode']
 
     logger.debug('VM Mode set to {0}.'.format(vmx3_mode))
 

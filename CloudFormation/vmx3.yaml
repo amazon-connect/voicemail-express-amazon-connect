@@ -302,9 +302,12 @@ Resources:
               - Outputs.VMEmailDefaultQueueTemplate
             - 'AWS::NoValue'
         VMXDefaultTaskFlow:
-          Fn::GetAtt:
-            - VMXContactFlowStack
-            - Outputs.VMXExampleTaskFlowID
+          !If
+            - ConnectTasksEnabled
+            - Fn::GetAtt:
+              - VMXContactFlowStack
+              - Outputs.VMXExampleTaskFlowID
+            - 'AWS::NoValue'
         VMXSecrets:
           Fn::GetAtt:
             - VMXCoreStack
