@@ -19,6 +19,13 @@ Voicemail Express uses the Amazon Kinesis Video Stream to capture the recording.
 ### I am not getting any voicemails
 Make sure that you are setting the **vmx_flag** value to `1` in your contact flows. This must be set in order for the VMXKVStoS3 function to know that it should process this record as a voicemail.
 
+## Email Delivery Issues
+### I see no errors, but email is not being delivered
+1.  Validate that the email addresses or domain have been validated in SES
+2.  For agent voicemails, validate that the agent ID is their email address
+3.  For queue voicemails, validate that you have added the **vmx3_queue_email** tag to the queue and populated it with a valid email address.
+4.  If you are using a custom template, make sure all variables referenced in the template exist as contact attributes on the call
+
 ## Removal Issues
 ### The VMXContactFlowStack fails to delete, causing the parent stack to fail as well.
 Make sure that you remove the test flow from any phone numbers in your Amazon Connect instance. If it is associated to a phone number, the delete will fail. Once you make that change, re-try the delete and it should now succeed.

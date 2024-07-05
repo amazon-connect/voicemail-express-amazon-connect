@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Deploys the Voicemail Express SES email templates and consolidated Lambda for managing templates.
+
+Parameters:
+  AWSRegion:
+    Type: String
+  ConnectInstanceAlias:
+    Type: String
+  EXPDevBucketPrefix:
+    Type: String
+  EXPTemplateVersion:
+    Type: String
+  LambdaLoggingLevel:
+    Type: String
+  VMXCoreRoleArn:
+    Type: String
+
+Resources:
+  VMEmailDefaultQueueTemplate:
+    Type: 'AWS::SES::Template'
+    Properties:
+      Template:
+        TemplateName:
+          !Join
+            - ''
+            - - 'vmx3_default_queue_'
+              - !Ref ConnectInstanceAlias
+        SubjectPart: 'Voicemail from {{callback_number}}'
+        TextPart: 'A voicemail was left for the {{entity_name}} queue from {{callback_number}}. You can listen to the message via the following URL: {{presigned_url}}'
+        HtmlPart: '<h1>{{entity_name}} Voicemail</h1><p>There is a voicemail from {{callback_number}}.</p><p><a href="{{presigned_url}}">Listen to the voicemail.</a></p><h2>Voicemail transcription</h2><p>{{transcript_contents}}</p>'
+
+  VMEmailDefaultAgentTemplate:
+    Type: 'AWS::SES::Template'
+    Properties:
+      Template:
+        TemplateName:
+          !Join
+            - ''
+            - - 'vmx3_default_agent_'
+              - !Ref ConnectInstanceAlias
+        SubjectPart: 'Voicemail from {{callback_number}}'
+        TextPart: 'Dear {{entity_name}}, A voicemail was left for you from {{callback_number}}. You can listen to the message via the following URL: {{presigned_url}}'
+        HtmlPart: '<h1>Voicemail for {{entity_name}} </h1><p>There is a voicemail from {{callback_number}}.</p><p><a href="{{presigned_url}}">Listen to the voicemail.</a></p><h2>Voicemail transcription</h2><p>{{transcript_contents}}</p>'
+
+  VMXSESTools:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          !Join
+            - ''
+            - - !Ref EXPDevBucketPrefix
+              - 'connectbd-sc-'
+              - !Ref AWSRegion
+        S3Key:
+          !Join
+          - ''
+          - - 'vmx3/'
+            - !Ref EXPTemplateVersion
+            - /zip/vmx3_ses_template_tool.py.zip
+      Description: Provides prebuilt function to manage email templates
+      Environment:
+        Variables:
+          lambda_logging_level:
+            Ref: LambdaLoggingLevel
+          package_version:
+            Ref: EXPTemplateVersion
+      FunctionName:
+        !Join
+            - ''
+            - - 'VMXSESTool-'
+              - !Ref ConnectInstanceAlias
+      Handler: vmx3_ses_template_tool.lambda_handler
+      Role: !Ref VMXCoreRoleArn
+      Runtime: python3.12
+      Timeout: 30
+
+Outputs:
+  VMEmailDefaultAgentTemplate:
+    Description: Default agent email template
+    Value: !Ref VMEmailDefaultAgentTemplate
+  VMEmailDefaultQueueTemplate:
+    Description: Default queue email template
+    Value: !Ref VMEmailDefaultQueueTemplate

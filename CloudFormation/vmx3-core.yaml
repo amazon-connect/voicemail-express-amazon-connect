@@ -126,6 +126,14 @@ Resources:
               - 'logs:CreateLogStream'
               - 'logs:PutLogEvents'
             Resource: 'arn:aws:logs:*:*:*'
+          - Effect: Allow
+            Action:
+              - 'ses:SendTemplatedEmail'
+              - 'ses:GetEmailTemplate'
+              - 'ses:UpdateEmailTemplate'
+              - 'ses:CreateEmailTemplate'
+              - 'ses:DeleteEmailTemplate'
+            Resource: '*'
       ManagedPolicyName:
         !Join
           - ''

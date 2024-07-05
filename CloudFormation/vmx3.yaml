@@ -16,19 +16,28 @@ Metadata:
           - LambdaLoggingLevel
       -
         Label:
-          default: "2. Voicemail Express Retention Settings"
+          default: "2. Voicemail Express AWS Delivery Modes"
+        Parameters:
+          - EnableVMToConnectTask
+          - EnableVMToEmail
+          - VMDefaultMode
+          - VMToEmailDefaultFrom
+          - VMToEmailDefaultTo
+      -
+        Label:
+          default: "3. Voicemail Express Retention Settings"
         Parameters:
           - RecordingsExpireInXDays
           - ExpiredLinkBehavior
       -
         Label:
-          default: "3. Voicemail Express Test Parameters"
+          default: "4. Voicemail Express Test Parameters"
         Parameters:
           - VMTestAgentId
           - VMTestQueueARN
       -
         Label:
-          default: "4. Advanced Settings (Experimental)"
+          default: "5. Advanced Settings - Use only in customized deployments"
         Parameters:
           - EXPDevBucketPrefix
           - EXPTemplateVersion
@@ -41,6 +50,10 @@ Metadata:
         default: "What is your Amazon Connect instance alias?"
       ConnectInstanceARN:
         default: "What is your Amazon Connect instance ARN (Amazon Resource Name)?"
+      EnableVMToConnectTask:
+        default: "Enable Voicemail to Amazon Connect Tasks?"
+      EnableVMToEmail:
+        default: "Enable Voicemail to email via Amazon Simple Email Service?"
       EXPDevBucketPrefix:
         default: "(TEST USE ONLY) What is the name of the bucket that holds your custom code?"
       ExpiredLinkBehavior:
@@ -51,6 +64,12 @@ Metadata:
         default: "For the included AWS Lambda functions, what should the default logging level be set to?"
       RecordingsExpireInXDays:
         default: "How long should the voicemail audio be available via URL? Maximum is 7 days."
+      VMDefaultMode:
+        default: "What is your default delivery mode?"
+      VMToEmailDefaultTo:
+        default: "(EMAIL MODE ONLY) Fallback TO email for voicemails if no address is provided?"
+      VMToEmailDefaultFrom:
+        default: "(EMAIL MODE ONLY) Fallback FROM email for voicemails if no address is provided?"
       VMTestAgentId:
         default: "Which agent ID should we use for testing?"
       VMTestQueueARN:
@@ -88,6 +107,20 @@ Parameters:
     Type: String
     Default: ''
     Description: Not required and only used for development purposes.
+  EnableVMToConnectTask:
+    Type: String
+    Default: yes
+    AllowedValues:
+      - yes
+      - no
+    Description: Allow voicemails to be delivered to agents as Amazon Connect Tasks.
+  EnableVMToEmail:
+    Type: String
+    Default: no
+    AllowedValues:
+      - yes
+      - no
+    Description: Allow voicemails to be delivered to agents as external Emails.
   ExpiredLinkBehavior:
     Type: String
     Default: delete
@@ -98,7 +131,7 @@ Parameters:
     Description: When recordings expire, do you want to delete the recording, keep it, or move it to Glacier?
   EXPTemplateVersion:
     Type: String
-    Default: 2024.06.01
+    Default: 2024.07.01
     Description: Template version. DO NOT CHANGE.
   LambdaLoggingLevel:
     Type: String
@@ -122,6 +155,21 @@ Parameters:
       - 6
       - 7
     Description: Number of days recordings are accessible via link. This is limited 
+  VMDefaultMode:
+    Type: String
+    Default: AmazonConnectTask
+    AllowedValues:
+      - AmazonConnectTask
+      - AmazonSimpleEmailService
+    Description: If no other voicemail delivery model can be identified, what model should be used?
+  VMToEmailDefaultFrom:
+    Type: String
+    Default: voicemail_from@test.com
+    Description: Email address to use when sending voicemails when another FROM address could not be identified.
+  VMToEmailDefaultTo:
+    Type: String
+    Default: voicemail_to@test.com
+    Description: Email address to catch voicemails where another TO address could not be identified.
   VMTestAgentId:
     Type: String
     Default: Looks like - jdoe or jdoe@test.com
@@ -130,6 +178,17 @@ Parameters:
     Type: String
     Default: Looks like - arn:aws:connect:REGION:ACCOUNT:instance/INSTANCEID/queue/QUEUEID
     Description: We need the Queue ARN for this configuration. The Queue ARN can be found in the Amazon Connect UI by navigating to Routing > Queue, choosing the queue, then expanding the 'Show additional queue information' section.
+
+Conditions:
+  ConnectTasksEnabled: !Equals [!Ref EnableVMToConnectTask, yes]
+  AWSEmailEnabled: !Equals [!Ref EnableVMToEmail, yes]
+
+Mappings:
+  VMModes:
+    AmazonConnectTask:
+      mode: task
+    AmazonSimpleEmailService:
+      mode: email
 
 Resources:
 
@@ -160,8 +219,12 @@ Resources:
       Parameters:
         ConnectInstanceAlias: !Ref ConnectInstanceAlias
         ConnectInstanceARN: !Ref ConnectInstanceARN
+        EnableVMToConnectTask: !Ref EnableVMToConnectTask
+        EnableVMToEmail: !Ref EnableVMToEmail
         VMTestAgentId: !Ref VMTestAgentId
         VMTestQueueARN: !Ref VMTestQueueARN
+        VMToEmailDefaultFrom: !Ref VMToEmailDefaultFrom
+        VMToEmailDefaultTo: !Ref VMToEmailDefaultTo
       TemplateURL:
         !Join
         - ''
@@ -176,6 +239,36 @@ Resources:
           - '/cloudformation/vmx3-contactflows.yaml'
       TimeoutInMinutes: 5
 
+  VMXSESSetupStack:
+    Type: AWS::CloudFormation::Stack
+    Condition: AWSEmailEnabled
+    DependsOn:
+      - VMXCoreStack
+    Properties:
+      Parameters:
+        AWSRegion: !Ref AWSRegion
+        ConnectInstanceAlias: !Ref ConnectInstanceAlias
+        EXPTemplateVersion: !Ref EXPTemplateVersion
+        EXPDevBucketPrefix: !Ref EXPDevBucketPrefix
+        LambdaLoggingLevel: !Ref LambdaLoggingLevel
+        VMXCoreRoleArn:
+          Fn::GetAtt:
+            - VMXCoreStack
+            - Outputs.VMXCoreRoleArn
+      TemplateURL:
+        !Join
+        - ''
+        - - 'https://'
+          - !Ref EXPDevBucketPrefix
+          - 'connectbd-sc-'
+          - !Ref AWSRegion
+          - '.s3.'
+          - !Ref AWSRegion
+          - '.amazonaws.com/vmx3/'
+          - !Ref EXPTemplateVersion
+          - '/cloudformation/vmx3-ses-setup.yaml'
+      TimeoutInMinutes: 5
+
   VMXLambdaStack:
     Type: AWS::CloudFormation::Stack
     DependsOn:
@@ -186,13 +279,35 @@ Resources:
         EXPTemplateVersion: !Ref EXPTemplateVersion
         AWSRegion: !Ref AWSRegion
         ConnectInstanceAlias: !Ref ConnectInstanceAlias
+        EnableVMToConnectTask: !Ref EnableVMToConnectTask
+        EnableVMToEmail: !Ref EnableVMToEmail
         EXPDevBucketPrefix: !Ref EXPDevBucketPrefix
         LambdaLoggingLevel: !Ref LambdaLoggingLevel
         RecordingsExpireInXDays: !Ref RecordingsExpireInXDays
+        VMDefaultMode: !Ref VMDefaultMode
+        VMToEmailDefaultFrom: !Ref VMToEmailDefaultFrom
+        VMToEmailDefaultTo: !Ref VMToEmailDefaultTo
+        VMEmailDefaultAgentTemplate:
+          !If
+            - AWSEmailEnabled
+            - Fn::GetAtt:
+              - VMXSESSetupStack
+              - Outputs.VMEmailDefaultAgentTemplate
+            - 'AWS::NoValue'
+        VMEmailDefaultQueueTemplate:
+          !If
+            - AWSEmailEnabled
+            - Fn::GetAtt:
+              - VMXSESSetupStack
+              - Outputs.VMEmailDefaultQueueTemplate
+            - 'AWS::NoValue'
         VMXDefaultTaskFlow:
-          Fn::GetAtt:
-            - VMXContactFlowStack
-            - Outputs.VMXExampleTaskFlowID
+          !If
+            - ConnectTasksEnabled
+            - Fn::GetAtt:
+              - VMXContactFlowStack
+              - Outputs.VMXExampleTaskFlowID
+            - 'AWS::NoValue'
         VMXSecrets:
           Fn::GetAtt:
             - VMXCoreStack

@@ -22,59 +22,73 @@ import os
 import logging
 import boto3
 
-# Establish logging configuration
 logger = logging.getLogger()
 logger.setLevel(logging.getLevelName(os.getenv('lambda_logging_level', 'DEBUG')))
-
 connect_client = boto3.client('connect')
+ses_client = boto3.client('sesv2')
 
-def vmx3_to_connect_task(writer_payload):
+def vmx3_to_ses_email(writer_payload):
 
-    logger.info('Beginning Voicemail to Task')
+    logger.info('Beginning Voicemail to email')
     logger.debug(writer_payload)
 
-    # Check for a task flow to use, if not, use default
-    if 'vmx3_task_flow' in writer_payload['json_attributes']:
-        if writer_payload['json_attributes']['vmx3_task_flow']:
-            contact_flow = writer_payload['json_attributes']['vmx3_task_flow']
-        else:
-            writer_payload.update({'vmx3_task_flow':os.environ['default_task_flow']})
-            contact_flow = os.environ['default_task_flow']
+    # Identify the proper address to send the email FROM
+    if 'email_from' in writer_payload['json_attributes']:
+        if writer_payload['json_attributes']['email_from']:
+            vmx3_email_from_address = writer_payload['json_attributes']['email_from']
+    else:
+        vmx3_email_from_address = os.environ['default_email_from']
+
+    # Set destination address
+    try:
+        vmx3_email_target_address = writer_payload['entity_email']
+
+    except:
+        vmx3_email_target_address = os.environ['default_email_target']
+
+    if '@' in vmx3_email_target_address:
+        logger.info('Valid email address format')
 
     else:
-        contact_flow = os.environ['default_task_flow']
+        vmx3_email_target_address = os.environ['default_email_target']
 
+    logger.debug('Target Email: ' + vmx3_email_target_address)
+
+    if 'vmx3_email_template' in writer_payload['json_attributes']:
+        if writer_payload['json_attributes']['email_template']:
+            vmx3_email_template = writer_payload['json_attributes']['email_template']
+
+    else:
+        if writer_payload['entity_type'] == 'agent':
+            vmx3_email_template = os.environ['default_agent_email_template']
+
+        else:
+            vmx3_email_template = os.environ['default_queue_email_template']
+
+    vmx3_email_data = json.dumps(writer_payload['json_attributes'])
+
+    # Send the email
     try:
-        create_task = connect_client.start_task_contact(
-            InstanceId=writer_payload['instance_id'],
-            ContactFlowId=contact_flow,
-            PreviousContactId=writer_payload['contact_id'],
-            Attributes={
-                'Callback_Number': writer_payload['json_attributes']['callback_number']
+
+        send_email = ses_client.send_email(
+            FromEmailAddress=vmx3_email_from_address,
+            Destination={
+                'ToAddresses': [
+                    vmx3_email_target_address,
+                ],
             },
-            Name='Voicemail for ' + writer_payload['json_attributes']['entity_name'],
-            References={
-                'Date Voicemail Received': {
-                    'Value': writer_payload['json_attributes']['vmx3_dateTime'],
-                    'Type': 'STRING'
-                },
-                'Original Queue': {
-                    'Value': writer_payload['json_attributes']['entity_name'],
-                    'Type':'STRING'
-                },
-                'Select link below to play voicemail recording': {
-                    'Value': writer_payload['json_attributes']['presigned_url'],
-                    'Type': 'URL'
+            Content={
+                'Template': {
+                    'TemplateName': vmx3_email_template,
+                    'TemplateData': vmx3_email_data
                 }
-            },
-            Description=writer_payload['json_attributes']['transcript_contents'],
-            ClientToken=writer_payload['contact_id']
+            }
         )
 
         return 'success'
 
     except Exception as e:
         logger.error(e)
-        logger.error('Failed to create task.')
+        logger.error('Failed to send email.')
 
         return 'fail'
