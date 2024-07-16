@@ -53,6 +53,7 @@ Resources:
       Enabled: true
       EventSourceArn: !Ref ConnectCTRStreamARN
       FunctionName: !Ref VMXKVStoS3
+      MaximumRetryAttempts: 3
       StartingPosition: LATEST
       FilterCriteria:
         Filters:
