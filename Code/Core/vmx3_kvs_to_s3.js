@@ -49,7 +49,7 @@ var kinesisvideomedia = new AWS.KinesisVideoMedia({ region: process.env.aws_regi
 
 exports.handler = async (event) => {
     // Uncomment the following line for debugging
-    //console.log('Event Received ==>', JSON.stringify(event, null, 2));
+    // console.log('Event Received ==>', JSON.stringify(event, null, 2));
 
     // Establish a response container
     var responseContainer = {};
@@ -171,6 +171,12 @@ exports.handler = async (event) => {
                             break;
 
                         case 'TagString':
+                            if (currentTagName === 'ContactId') {
+                                if (value !== currentContactID) {
+                                    console.log(`Contact ID mismatch. Expected ${currentContactID}, got ${value}`);
+                                    shouldProcessKvs = false;
+                                }
+                            }
                             /**
                              * This chunk contains a tag string containing the value of the tag name above.  If the
                              * current tag name is AWS_KINESISVIDEO_FRAGMENT_NUMBER we know that this tag string is
