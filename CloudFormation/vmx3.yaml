@@ -135,7 +135,7 @@ Parameters:
     Description: Template version. DO NOT CHANGE.
   LambdaLoggingLevel:
     Type: String
-    Default: ERROR
+    Default: INFO
     AllowedValues:
       - FATAL
       - ERROR
@@ -143,7 +143,7 @@ Parameters:
       - INFO
       - DEBUG
       - TRACE
-    Description: Default is Error. This can be changed later. Details on logging can be found at https://docs.aws.amazon.com/lambda/latest/dg/monitoring-cloudwatchlogs.html#monitoring-cloudwatchlogs-runtime-logging
+    Description: Default is Info. This can be changed later. Details on logging can be found at https://docs.aws.amazon.com/lambda/latest/dg/monitoring-cloudwatchlogs.html#monitoring-cloudwatchlogs-runtime-logging
   RecordingsExpireInXDays:
     Type: String
     Default: 1

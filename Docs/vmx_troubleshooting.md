@@ -2,7 +2,7 @@
 Below are some common problems customers have encountered with the appropriate resolution.
 
 ## General troubleshooting tips
--  If you are experiencing issues, set the logging level of the Lambda functions to DEBUG. You can change this setting by going to the 4 core functions (VMXKVStoS3, VMXTranscriber, VMXPackager, VMXPresigner) and changing the Environment Variable for **lambda_logging_level** to `DEBUG`. This will provide the most detail.
+-  If you are experiencing issues, set the logging level of the Lambda functions to DEBUG. You can change this setting by going to the 4 core functions (VMXKVStoS3, VMXTranscriber, VMXPackager, VMXPresigner) and changing the application logging level to `DEBUG`. This will provide the most detail. Refer to the [Configuring advanced logging controls for Lambda functions](https://docs.aws.amazon.com/lambda/latest/dg/monitoring-cloudwatchlogs-advanced.html) section of the AWS Lambda guide for more details.
 -  The flow of events, at a high level, is:
     -  CTR is emitted
     -  VMXKVStoS3 function

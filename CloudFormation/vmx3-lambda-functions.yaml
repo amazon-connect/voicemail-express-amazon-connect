@@ -85,7 +85,7 @@ Resources:
           !Join
             - ''
             - - !Ref EXPDevBucketPrefix
-              - 'vmx-source'
+              - 'vmx-source-'
               - !Ref AWSRegion
         S3Key:
           !Join
@@ -110,7 +110,7 @@ Resources:
           !Join
             - ''
             - - !Ref EXPDevBucketPrefix
-              - 'vmx-source'
+              - 'vmx-source-'
               - !Ref AWSRegion
         S3Key:
           !Join
@@ -133,7 +133,7 @@ Resources:
           !Join
             - ''
             - - !Ref EXPDevBucketPrefix
-              - 'vmx-source'
+              - 'vmx-source-'
               - !Ref AWSRegion
         S3Key:
           !Join
@@ -162,7 +162,7 @@ Resources:
         ApplicationLogLevel:
           Ref: LambdaLoggingLevel
         LogFormat: JSON
-        SystemLogLevel: WARN
+        SystemLogLevel: INFO
       Role: !Ref VMXCoreRoleArn
       Runtime: python3.12
       Timeout: 30
@@ -175,7 +175,7 @@ Resources:
           !Join
             - ''
             - - !Ref EXPDevBucketPrefix
-              - 'vmx-source'
+              - 'vmx-source-'
               - !Ref AWSRegion
         S3Key:
           !Join
@@ -218,7 +218,7 @@ Resources:
         ApplicationLogLevel:
           Ref: LambdaLoggingLevel
         LogFormat: JSON
-        SystemLogLevel: WARN
+        SystemLogLevel: INFO
       Role: !Ref VMXCoreRoleArn
       Layers: [!Ref VMXPythonLayer]
       Runtime: python3.12
@@ -232,7 +232,7 @@ Resources:
           !Join
             - ''
             - - !Ref EXPDevBucketPrefix
-              - 'vmx-source'
+              - 'vmx-source-'
               - !Ref AWSRegion
         S3Key:
           !Join
@@ -261,7 +261,7 @@ Resources:
         ApplicationLogLevel:
           Ref: LambdaLoggingLevel
         LogFormat: JSON
-        SystemLogLevel: WARN
+        SystemLogLevel: INFO
       Timeout: 900
 
   VMXKVStoS3:
@@ -272,7 +272,7 @@ Resources:
           !Join
             - ''
             - - !Ref EXPDevBucketPrefix
-              - 'vmx-source'
+              - 'vmx-source-'
               - !Ref AWSRegion
         S3Key:
           !Join
@@ -302,7 +302,7 @@ Resources:
         ApplicationLogLevel:
           Ref: LambdaLoggingLevel
         LogFormat: JSON
-        SystemLogLevel: WARN
+        SystemLogLevel: INFO
       Timeout: 900
 
   VMXTranscribeErrorHandler:
@@ -313,7 +313,7 @@ Resources:
           !Join
             - ''
             - - !Ref EXPDevBucketPrefix
-              - 'vmx-source'
+              - 'vmx-source-'
               - !Ref AWSRegion
         S3Key:
           !Join
@@ -342,7 +342,7 @@ Resources:
         ApplicationLogLevel:
           Ref: LambdaLoggingLevel
         LogFormat: JSON
-        SystemLogLevel: WARN
+        SystemLogLevel: INFO
       Timeout: 30
 
   VMXAddOnPolicy:
