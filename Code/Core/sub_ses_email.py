@@ -1,4 +1,4 @@
-# Version: 2024.07.02
+# Version: 2024.07.03
 """
 **********************************************************************************************************************
  *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -23,7 +23,7 @@ import logging
 import boto3
 
 logger = logging.getLogger()
-logger.setLevel(logging.getLevelName(os.getenv('lambda_logging_level', 'DEBUG')))
+
 connect_client = boto3.client('connect')
 ses_client = boto3.client('sesv2')
 

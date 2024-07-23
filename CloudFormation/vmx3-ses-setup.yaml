@@ -51,7 +51,7 @@ Resources:
           !Join
             - ''
             - - !Ref EXPDevBucketPrefix
-              - 'connectbd-sc-'
+              - 'vmx-source-'
               - !Ref AWSRegion
         S3Key:
           !Join

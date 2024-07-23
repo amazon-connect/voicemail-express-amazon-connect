@@ -85,7 +85,7 @@ Resources:
           !Join
             - ''
             - - !Ref EXPDevBucketPrefix
-              - 'connectbd-sc-'
+              - 'vmx-source'
               - !Ref AWSRegion
         S3Key:
           !Join
@@ -110,7 +110,7 @@ Resources:
           !Join
             - ''
             - - !Ref EXPDevBucketPrefix
-              - 'connectbd-sc-'
+              - 'vmx-source'
               - !Ref AWSRegion
         S3Key:
           !Join
@@ -133,7 +133,7 @@ Resources:
           !Join
             - ''
             - - !Ref EXPDevBucketPrefix
-              - 'connectbd-sc-'
+              - 'vmx-source'
               - !Ref AWSRegion
         S3Key:
           !Join
@@ -146,8 +146,6 @@ Resources:
         Variables:
           aws_region:
             Ref: AWSRegion
-          lambda_logging_level:
-            Ref: LambdaLoggingLevel
           s3_obj_lifecycle:
             Ref: RecordingsExpireInXDays
           secrets_key_id:
@@ -160,6 +158,11 @@ Resources:
             - - 'VMX3-Presigner-'
               - !Ref ConnectInstanceAlias
       Handler: vmx3_presigner.lambda_handler
+      LoggingConfig:
+        ApplicationLogLevel:
+          Ref: LambdaLoggingLevel
+        LogFormat: JSON
+        SystemLogLevel: String
       Role: !Ref VMXCoreRoleArn
       Runtime: python3.12
       Timeout: 30
@@ -172,7 +175,7 @@ Resources:
           !Join
             - ''
             - - !Ref EXPDevBucketPrefix
-              - 'connectbd-sc-'
+              - 'vmx-source'
               - !Ref AWSRegion
         S3Key:
           !Join
@@ -191,8 +194,6 @@ Resources:
             Ref: VMXPresigner
           default_task_flow:
             !If [ConnectTasksEnabled, !Ref VMXDefaultTaskFlow, 'AWS::NoValue']
-          lambda_logging_level:
-            Ref: LambdaLoggingLevel
           package_version:
             Ref: EXPTemplateVersion
           TZ:
@@ -213,6 +214,11 @@ Resources:
             - - 'VMX3-Packager-'
               - !Ref ConnectInstanceAlias
       Handler: vmx3_packager.lambda_handler
+      LoggingConfig:
+        ApplicationLogLevel:
+          Ref: LambdaLoggingLevel
+        LogFormat: JSON
+        SystemLogLevel: String
       Role: !Ref VMXCoreRoleArn
       Layers: [!Ref VMXPythonLayer]
       Runtime: python3.12
@@ -226,7 +232,7 @@ Resources:
           !Join
             - ''
             - - !Ref EXPDevBucketPrefix
-              - 'connectbd-sc-'
+              - 'vmx-source'
               - !Ref AWSRegion
         S3Key:
           !Join
@@ -241,8 +247,6 @@ Resources:
             Ref: AWSRegion
           s3_transcripts_bucket:
             Ref: VMXS3TranscriptsBucket
-          lambda_logging_level:
-            Ref: LambdaLoggingLevel
           package_version:
             Ref: EXPTemplateVersion
       FunctionName:
@@ -253,6 +257,11 @@ Resources:
       Handler: vmx3_transcriber.lambda_handler
       Role: !Ref VMXCoreRoleArn
       Runtime: python3.12
+      LoggingConfig:
+        ApplicationLogLevel:
+          Ref: LambdaLoggingLevel
+        LogFormat: JSON
+        SystemLogLevel: String
       Timeout: 900
 
   VMXKVStoS3:
@@ -263,7 +272,7 @@ Resources:
           !Join
             - ''
             - - !Ref EXPDevBucketPrefix
-              - 'connectbd-sc-'
+              - 'vmx-source'
               - !Ref AWSRegion
         S3Key:
           !Join
@@ -278,8 +287,6 @@ Resources:
             Ref: AWSRegion
           s3_recordings_bucket:
             Ref: VMXS3RecordingsBucket
-          lambda_logging_level:
-            Ref: LambdaLoggingLevel
           package_version:
             Ref: EXPTemplateVersion
       FunctionName:
@@ -291,6 +298,11 @@ Resources:
       Role: !Ref VMXCoreRoleArn
       Layers: [!Ref VMXNodeLayer]
       Runtime: nodejs18.x
+      LoggingConfig:
+        ApplicationLogLevel:
+          Ref: LambdaLoggingLevel
+        LogFormat: JSON
+        SystemLogLevel: String
       Timeout: 900
 
   VMXTranscribeErrorHandler:
@@ -301,7 +313,7 @@ Resources:
           !Join
             - ''
             - - !Ref EXPDevBucketPrefix
-              - 'connectbd-sc-'
+              - 'vmx-source'
               - !Ref AWSRegion
         S3Key:
           !Join
@@ -316,8 +328,6 @@ Resources:
             Ref: AWSRegion
           s3_transcripts_bucket:
             Ref: VMXS3TranscriptsBucket
-          lambda_logging_level:
-            Ref: LambdaLoggingLevel
           package_version:
             Ref: EXPTemplateVersion
       FunctionName:
@@ -328,6 +338,11 @@ Resources:
       Handler: vmx3_transcription_error_handler.lambda_handler
       Role: !Ref VMXCoreRoleArn
       Runtime: python3.12
+      LoggingConfig:
+        ApplicationLogLevel:
+          Ref: LambdaLoggingLevel
+        LogFormat: JSON
+        SystemLogLevel: String
       Timeout: 30
 
   VMXAddOnPolicy:
