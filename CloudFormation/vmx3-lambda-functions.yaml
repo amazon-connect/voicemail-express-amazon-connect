@@ -162,7 +162,7 @@ Resources:
         ApplicationLogLevel:
           Ref: LambdaLoggingLevel
         LogFormat: JSON
-        SystemLogLevel: String
+        SystemLogLevel: WARN
       Role: !Ref VMXCoreRoleArn
       Runtime: python3.12
       Timeout: 30
@@ -218,7 +218,7 @@ Resources:
         ApplicationLogLevel:
           Ref: LambdaLoggingLevel
         LogFormat: JSON
-        SystemLogLevel: String
+        SystemLogLevel: WARN
       Role: !Ref VMXCoreRoleArn
       Layers: [!Ref VMXPythonLayer]
       Runtime: python3.12
@@ -261,7 +261,7 @@ Resources:
         ApplicationLogLevel:
           Ref: LambdaLoggingLevel
         LogFormat: JSON
-        SystemLogLevel: String
+        SystemLogLevel: WARN
       Timeout: 900
 
   VMXKVStoS3:
@@ -302,7 +302,7 @@ Resources:
         ApplicationLogLevel:
           Ref: LambdaLoggingLevel
         LogFormat: JSON
-        SystemLogLevel: String
+        SystemLogLevel: WARN
       Timeout: 900
 
   VMXTranscribeErrorHandler:
@@ -342,7 +342,7 @@ Resources:
         ApplicationLogLevel:
           Ref: LambdaLoggingLevel
         LogFormat: JSON
-        SystemLogLevel: String
+        SystemLogLevel: WARN
       Timeout: 30
 
   VMXAddOnPolicy:
