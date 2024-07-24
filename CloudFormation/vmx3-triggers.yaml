@@ -48,14 +48,16 @@ Resources:
   CTRStreamMapping:
     Type: AWS::Lambda::EventSourceMapping
     Properties:
-      BatchSize: 10
+      BatchSize: 1
+      BisectBatchOnFunctionError: true
       Enabled: true
       EventSourceArn: !Ref ConnectCTRStreamARN
       FunctionName: !Ref VMXKVStoS3
+      MaximumRetryAttempts: 3
       StartingPosition: LATEST
       FilterCriteria:
         Filters:
-          - Pattern: "{\"data\": {\"Attributes\": {\"vmx3_flag\": [\"1\"]}}}"
+          - Pattern: "{    \"data\":{        \"Attributes\":{            \"vmx3_flag\":[\"1\"]        },        \"Recordings\":{            \"StorageType\":[\"KINESIS_VIDEO_STREAM\"]        },        \"Agent\":[null]    }}"
 
   TranscriberRule:
     Type: AWS::Events::Rule

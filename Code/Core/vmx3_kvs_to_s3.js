@@ -1,4 +1,4 @@
-// Version: 2024.07.01
+// Version: 2024.07.03
 /*
  **********************************************************************************************************************
  *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -29,10 +29,10 @@ const done = () => {
     return new Promise((resolve, reject) => {
         var checkFinished = () => {
             if (streamFinished) {
-                console.log('finished');
+                console.info('finished');
                 resolve();
             } else {
-                console.log('not finished, waiting 500 ms...');
+                console.info('not finished, waiting 500 ms...');
                 setTimeout(checkFinished, 500);
             }
         };
@@ -48,8 +48,8 @@ var kinesisvideo = new AWS.KinesisVideo({ region: process.env.aws_region });
 var kinesisvideomedia = new AWS.KinesisVideoMedia({ region: process.env.aws_region });
 
 exports.handler = async (event) => {
-    // Uncomment the following line for debugging
-    //console.log('Event Received ==>', JSON.stringify(event, null, 2));
+
+    console.debug(event);
 
     // Establish a response container
     var responseContainer = {};
@@ -62,12 +62,12 @@ exports.handler = async (event) => {
     console.log('event.Records.length value: ' + event.Records.length);
     for (let i = 0; i < event.Records.length; i++) {
         const record = event.Records[i];
-        //uncomment the lines below for debugging:
-        //console.log('record: ' + i);
-        //console.log(JSON.stringify(record));
+
+        console.debug('record: ' + i);
+        console.debug(JSON.stringify(record));
         
-        //async process records to ensure they don't overlap. 
-        //running multiple simultaneously was causing contention.
+        // async process records to ensure they don't overlap. 
+        // running multiple simultaneously was causing contention.
         await processRecord(record, i, totalRecordCount, processedRecordCount, responseContainer);
     }
 
@@ -77,40 +77,23 @@ exports.handler = async (event) => {
         let currentTagString = '';
         let currentFragment = BigInt(0);
 
-
         // Increment record counter
         totalRecordCount = i;
-        console.log('Starting record #' + totalRecordCount);
+        console.info('Starting record #' + totalRecordCount);
 
         // Grab the data from the event for the record, decode it, grab the attributes we need, and check if this is a voicemail to process
         try {
             // Decode the payload
             const payload = Buffer.from(record.kinesis.data, 'base64').toString();
             var vmrecord = JSON.parse(payload);
-            // Uncomment the following line for debugging
-            // console.log(vmrecord)
+
+            console.debug(vmrecord)
             // Grab ContactID & Instance ARN
             var currentContactID = vmrecord.ContactId;
         } catch (e) {
-            console.log('FAIL: Record extraction failed');
+            console.error(e)
+            console.error('FAIL: Record extraction failed');
             responseContainer['record' + totalRecordCount + 'result'] = 'Failed to extract record and/or decode';
-        };
-
-        // Check for the positive vmx3_flag attribute so we know that this is a vm to process
-        try {
-            var vmx3_flag = vmrecord.Attributes.vmx3_flag || '99';
-            if (vmx3_flag == '0') {
-                responseContainer['record ' + totalRecordCount + 'result'] = ' ContactID: ' + currentContactID + ' - IGNORE - voicemail already processed';
-                processedRecordCount = processedRecordCount + 1;
-            } else if (vmx3_flag == '1') {
-                console.log('Record #' + totalRecordCount + ' ContactID: ' + currentContactID + ' -  is a voicemail - begin processing.')
-            } else {
-                responseContainer['record' + totalRecordCount + 'result'] = ' ContactID: ' + currentContactID + ' - IGNORE - voicemail flag not valid';
-                processedRecordCount = processedRecordCount + 1;
-            }
-        } catch (e) {
-            responseContainer['record' + totalRecordCount + 'result'] = ' ContactID: ' + currentContactID + ' - IGNORE - Some other bad thing happened with the attribute comparison.';
-            processedRecordCount = processedRecordCount + 1;
         };
 
         // Grab kvs stream data
@@ -120,7 +103,8 @@ exports.handler = async (event) => {
             var stopFragmentNum = BigInt(vmrecord.Recordings[0].FragmentStopNumber);
             var streamName = vmrecord.Recordings[0].Location.substring(streamARN.indexOf("/") + 1, streamARN.lastIndexOf("/"));
         } catch (e) {
-            console.log('FAIL: Counld not identify KVS info');
+            console.error(e)
+            console.error('FAIL: Counld not identify KVS info');
             responseContainer['record' + totalRecordCount + 'result'] = 'Failed to extract KVS info';
         };
 
@@ -135,73 +119,55 @@ exports.handler = async (event) => {
             });
             attr_tag_container = attr_tag_container.replace(/&\s*$/, '');
         } catch (e) {
-            console.log('FAIL: Counld not extract vm tags');
+            console.error(e)
+            console.error('FAIL: Counld not extract vm tags');
             responseContainer['record' + totalRecordCount + 'result'] = 'Failed to extract vm tags';
         }
 
         // Process audio and write to S3
         try {
+            let chunkCount = 0;
             // Establish decoder and start listening. AS we get data, push it  into the array to be processed by writer
             decoder = new Decoder();
             decoder.on('data', chunk => {
-                /**
-                 * Check the shouldProcessKvs field.  If it's true, then proceed with looking at this chunk.  If it's
-                 * false, then don't look at this chunk at all.
-                 *
-                 * This will be set to false once the current fragment number greater than the stop fragment number
-                 * indicating that we've gone as far as we should go in this KVS.
-                 *
-                 */
-
+                 
+                chunkCount++;
+                
                 const { name, value } = chunk[1];
 
-                //console.log(`Examining a chunk named: ${name}`);
+                console.trace(`Examining a chunk named: ${name}`);
 
                 if (shouldProcessKvs) {
                     switch (name) {
                         case 'TagName':
-                            /**
-                             * This chunk contains a tag name indicating what type of data is contained in the next
-                             * TagString chunk.
-                             *
-                             * Store the value of the chunk in the currentTagName field.
-                             *
-                             */
                             currentTagName = value;
                             break;
 
                         case 'TagString':
-                            /**
-                             * This chunk contains a tag string containing the value of the tag name above.  If the
-                             * current tag name is AWS_KINESISVIDEO_FRAGMENT_NUMBER we know that this tag string is
-                             * the value of the AWS_KINESISVIDEO_FRAGMENT_NUMBER.
-                             *
-                             * Store the BigInt value of the chunk in the currentFragment field.  Fragment numbers are
-                             * very large and require a BigInt data type.
-                             *
-                             */
+                            if (currentTagName === 'ContactId') {
+                                if (value !== currentContactID) {
+                                    console.info(`Contact ID mismatch. Expected ${currentContactID}, got ${value}`);
+                                    shouldProcessKvs = false;
+                                }
+                            }
+
                             if (currentTagName === 'AWS_KINESISVIDEO_FRAGMENT_NUMBER') {
                                 currentFragment = BigInt(value);
 
-                                /**
-                                 * If the current fragment number is after the stop fragment number from the CTR, then
-                                 * set the shouldProcessKvs field to false to tell the system to not look at this
-                                 * stream in this Lambda execution any longer.
-                                 *
-                                 */
+
                                 if (currentFragment > stopFragmentNum) {
-                                    console.log(`Current fragment number [${currentFragment}] is greater than the stop fragment number [${stopFragmentNum}].  Stopping KVS processing.`);
-                                    shouldProcessKvs = false;
+                                    console.info(`Current fragment number [${currentFragment}] is greater than the stop fragment number [${stopFragmentNum}].  Stopping KVS processing.`);
+                                    console.debug('chunkCount', chunkCount);
+                                    decoder.destroy();
+                                    console.debug('decoder.destroyed()', decoder.destroyed());
+                                    shouldProcessKvs = false; 
                                 }
                             }
                             break;
 
                         case 'Block':
                         case 'SimpleBlock':
-                            /**
-                             * This chunk contains audio data so write it to the wav file buffer.
-                             *
-                             */
+
                             wavBufferArray.push(chunk[1].payload);
                             break;
 
@@ -236,6 +202,7 @@ exports.handler = async (event) => {
                     Tagging: attr_tag_container
                 };
                 var out = await s3.putObject(s3_params).promise();
+                console.debug('s3.putObject response', out);
 
                 // Whack the data so we have a clean start point
                 s3ObjectData = []
@@ -243,7 +210,7 @@ exports.handler = async (event) => {
 
                 // Increment processed records
                 processedRecordCount = processedRecordCount + 1;
-                console.log('record' + totalRecordCount + 'result ContactID: ' + currentContactID + ' -  Write complete');
+                console.info('record' + totalRecordCount + 'result ContactID: ' + currentContactID + ' -  Write complete');
                 responseContainer['record' + totalRecordCount + 'result'] = ' ContactID: ' + currentContactID + ' -  Write complete';
                 streamFinished = true;
             });
@@ -256,6 +223,7 @@ exports.handler = async (event) => {
 
             // Extract data from stream for processing using the data extraction function
             var data = await kinesisvideo.getDataEndpoint(stream_params).promise();
+            console.debug(data)
             kinesisvideomedia.endpoint = new AWS.Endpoint(data.DataEndpoint);
 
             await parseNextFragmentNew(streamARN, startFragmentNum.toString(), null);
@@ -264,7 +232,8 @@ exports.handler = async (event) => {
             await done();
 
         } catch (e) {
-            //console.log('FAIL: Counld write audio to S3');
+            console.error(e)
+            console.error('FAIL: Counld write audio to S3');
             responseContainer['record' + totalRecordCount + 'result'] = ' ContactID: ' + currentContactID + ' -  Failed to write audio to S3';
         }
     };
@@ -280,8 +249,7 @@ exports.handler = async (event) => {
         }
     };
 
-    // Uncomment the following line for debugging
-    // console.log(response)
+    console.debug(response)
 
     return response;
 };

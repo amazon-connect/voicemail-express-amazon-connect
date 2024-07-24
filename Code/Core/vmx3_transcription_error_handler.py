@@ -1,4 +1,4 @@
-# Version: 2024.07.01
+# Version: 2024.07.03
 """
 **********************************************************************************************************************
  *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -24,7 +24,6 @@ import logging
 
 # Establish logging configuration
 logger = logging.getLogger()
-logger.setLevel(logging.getLevelName(os.getenv('lambda_logging_level', 'INFO')))
 
 def lambda_handler(event, context):
     

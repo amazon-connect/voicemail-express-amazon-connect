@@ -131,18 +131,19 @@ Parameters:
     Description: When recordings expire, do you want to delete the recording, keep it, or move it to Glacier?
   EXPTemplateVersion:
     Type: String
-    Default: 2024.07.01
+    Default: 2024.07.03
     Description: Template version. DO NOT CHANGE.
   LambdaLoggingLevel:
     Type: String
-    Default: ERROR
+    Default: INFO
     AllowedValues:
-      - CRITICAL
+      - FATAL
       - ERROR
-      - WARNING
+      - WARN
       - INFO
       - DEBUG
-    Description: Default is Error. This can be changed later. Details on logging can be found at https://docs.aws.amazon.com/lambda/latest/dg/monitoring-cloudwatchlogs.html#monitoring-cloudwatchlogs-runtime-logging
+      - TRACE
+    Description: Default is Info. This can be changed later. Details on logging can be found at https://docs.aws.amazon.com/lambda/latest/dg/monitoring-cloudwatchlogs.html#monitoring-cloudwatchlogs-runtime-logging
   RecordingsExpireInXDays:
     Type: String
     Default: 1
@@ -204,7 +205,7 @@ Resources:
         - ''
         - - 'https://'
           - !Ref EXPDevBucketPrefix
-          - 'connectbd-sc-'
+          - 'vmx-source-'
           - !Ref AWSRegion
           - '.s3.'
           - !Ref AWSRegion
@@ -230,7 +231,7 @@ Resources:
         - ''
         - - 'https://'
           - !Ref EXPDevBucketPrefix
-          - 'connectbd-sc-'
+          - 'vmx-source-'
           - !Ref AWSRegion
           - '.s3.'
           - !Ref AWSRegion
@@ -260,7 +261,7 @@ Resources:
         - ''
         - - 'https://'
           - !Ref EXPDevBucketPrefix
-          - 'connectbd-sc-'
+          - 'vmx-source-'
           - !Ref AWSRegion
           - '.s3.'
           - !Ref AWSRegion
@@ -333,7 +334,7 @@ Resources:
         - ''
         - - 'https://'
           - !Ref EXPDevBucketPrefix
-          - 'connectbd-sc-'
+          - 'vmx-source-'
           - !Ref AWSRegion
           - '.s3.'
           - !Ref AWSRegion
@@ -388,7 +389,7 @@ Resources:
         - ''
         - - 'https://'
           - !Ref EXPDevBucketPrefix
-          - 'connectbd-sc-'
+          - 'vmx-source-'
           - !Ref AWSRegion
           - '.s3.'
           - !Ref AWSRegion

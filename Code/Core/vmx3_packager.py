@@ -1,4 +1,4 @@
-# Version: 2024.07.01
+# Version: 2024.07.03
 """
 **********************************************************************************************************************
  *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -30,7 +30,7 @@ import sub_ses_email
 
 # Establish logging configuration
 logger = logging.getLogger()
-logger.setLevel(logging.getLevelName(os.getenv('lambda_logging_level', 'DEBUG')))
+
 connect_client = boto3.client('connect')
 
 def lambda_handler(event, context):
