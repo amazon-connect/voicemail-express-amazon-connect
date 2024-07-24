@@ -6,6 +6,7 @@ Voicemail Express is designed to provide basic voicemail functionality to Amazon
 ## What's new in VMX3 (2024.07.03)
 -  Updated KVS to S3 function to reduce error conditions in environments with heavy KVS use or long retention windows.
 -  Updated all Lambda functions to use the native Lambda logging configuration
+-  Changed code/template buckets to further seperate from VMX2
 
 ### How it works
 With Voicemail Express, customers can have the option to leave a voicemail for an agent or queue. Once the voicemail is recorded, a series of processes take place in the following order:
