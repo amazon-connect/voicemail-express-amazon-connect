@@ -4,7 +4,7 @@ Voicemail Express is designed to provide basic voicemail functionality to Amazon
 ![Voicemail Express Architecture](Docs/Img/VMX3.png)
 
 ## What's new in VMX3 (2024.07.03)
--  Updated KVS APIs used to reduce chance of an overrun condition
+-  Updated KVS to S3 function to reduce error conditions in environments with heavy KVS use or long retention windows.
 -  Updated all Lambda functions to use the native Lambda logging configuration
 
 ### How it works
