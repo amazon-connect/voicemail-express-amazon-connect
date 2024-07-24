@@ -23,14 +23,32 @@ const s3 = new AWS.S3();
 const BUCKET_NAME = process.env.s3_recordings_bucket;
 const AUDIO_MIME_TYPE = 'audio/x-wav';
 
+/* function that returns a promise to wait until the stream is done writing to the S3 bucket because tries to reduce the init time lambda runs the same function that was already in memory or container.*/
+let streamFinished = false;
+const done = () => {
+    return new Promise((resolve, reject) => {
+        var checkFinished = () => {
+            if (streamFinished) {
+                console.info('finished');
+                resolve();
+            } else {
+                console.info('not finished, waiting 500 ms...');
+                setTimeout(checkFinished, 500);
+            }
+        };
+        setTimeout(checkFinished, 500);
+    });
+};
+
 var decoder;
 var wavBufferArray = [];
 var wavOutputStream;
 
 var kinesisvideo = new AWS.KinesisVideo({ region: process.env.aws_region });
-var kinesisvideoarchivedmedia = new AWS.KinesisVideoArchivedMedia({ region: process.env.aws_region });
+var kinesisvideomedia = new AWS.KinesisVideoMedia({ region: process.env.aws_region });
 
 exports.handler = async (event) => {
+
     console.debug(event);
 
     // Establish a response container
@@ -41,19 +59,24 @@ exports.handler = async (event) => {
     var processedRecordCount = 0;
 
     // Process incoming records one by one
-    console.info('event.Records.length value: ' + event.Records.length);
+    console.log('event.Records.length value: ' + event.Records.length);
     for (let i = 0; i < event.Records.length; i++) {
         const record = event.Records[i];
 
         console.debug('record: ' + i);
         console.debug(JSON.stringify(record));
         
-        //async process records to ensure they don't overlap. 
-        //running multiple simultaneously was causing contention.
+        // async process records to ensure they don't overlap. 
+        // running multiple simultaneously was causing contention.
         await processRecord(record, i, totalRecordCount, processedRecordCount, responseContainer);
     }
 
     async function processRecord(record, i, totalRecordCount, processedRecordCount, responseContainer) {
+        let shouldProcessKvs = true;
+        let currentTagName = '';
+        let currentTagString = '';
+        let currentFragment = BigInt(0);
+
         // Increment record counter
         totalRecordCount = i;
         console.info('Starting record #' + totalRecordCount);
@@ -63,8 +86,8 @@ exports.handler = async (event) => {
             // Decode the payload
             const payload = Buffer.from(record.kinesis.data, 'base64').toString();
             var vmrecord = JSON.parse(payload);
+
             console.debug(vmrecord)
-            
             // Grab ContactID & Instance ARN
             var currentContactID = vmrecord.ContactId;
         } catch (e) {
@@ -76,9 +99,9 @@ exports.handler = async (event) => {
         // Grab kvs stream data
         try {
             var streamARN = vmrecord.Recordings[0].Location;
-            var startTimestamp = parseISOString(vmrecord.Recordings[0].StartTimestamp)
-            var stopTimestamp = parseISOString(vmrecord.Recordings[0].StopTimestamp)
-            
+            var startFragmentNum = BigInt(vmrecord.Recordings[0].FragmentStartNumber);
+            var stopFragmentNum = BigInt(vmrecord.Recordings[0].FragmentStopNumber);
+            var streamName = vmrecord.Recordings[0].Location.substring(streamARN.indexOf("/") + 1, streamARN.lastIndexOf("/"));
         } catch (e) {
             console.error(e)
             console.error('FAIL: Counld not identify KVS info');
@@ -95,8 +118,6 @@ exports.handler = async (event) => {
                 };
             });
             attr_tag_container = attr_tag_container.replace(/&\s*$/, '');
-            console.debug('Tags for this contact: ' + attr_tag_container)
-            
         } catch (e) {
             console.error(e)
             console.error('FAIL: Counld not extract vm tags');
@@ -105,21 +126,55 @@ exports.handler = async (event) => {
 
         // Process audio and write to S3
         try {
+            let chunkCount = 0;
             // Establish decoder and start listening. AS we get data, push it  into the array to be processed by writer
             decoder = new Decoder();
             decoder.on('data', chunk => {
-
-                const { name, value } = chunk[1];
-                console.trace(`Examining a chunk named: ${name}`);
+                 
+                chunkCount++;
                 
-                switch (name) {
-                    case 'Block':
-                    case 'SimpleBlock':
-                        wavBufferArray.push(chunk[1].payload);
-                        break;
+                const { name, value } = chunk[1];
 
-                    default:
-                        break;
+                console.trace(`Examining a chunk named: ${name}`);
+
+                if (shouldProcessKvs) {
+                    switch (name) {
+                        case 'TagName':
+                            currentTagName = value;
+                            break;
+
+                        case 'TagString':
+                            if (currentTagName === 'ContactId') {
+                                if (value !== currentContactID) {
+                                    console.info(`Contact ID mismatch. Expected ${currentContactID}, got ${value}`);
+                                    shouldProcessKvs = false;
+                                }
+                            }
+
+                            if (currentTagName === 'AWS_KINESISVIDEO_FRAGMENT_NUMBER') {
+                                currentFragment = BigInt(value);
+
+
+                                if (currentFragment > stopFragmentNum) {
+                                    console.info(`Current fragment number [${currentFragment}] is greater than the stop fragment number [${stopFragmentNum}].  Stopping KVS processing.`);
+                                    console.debug('chunkCount', chunkCount);
+                                    decoder.destroy();
+                                    console.debug('decoder.destroyed()', decoder.destroyed());
+                                    shouldProcessKvs = false; 
+                                }
+                            }
+                            break;
+
+                        case 'Block':
+                        case 'SimpleBlock':
+
+                            wavBufferArray.push(chunk[1].payload);
+                            break;
+
+                        default:
+                            break;
+
+                    }
                 }
             });
 
@@ -147,9 +202,9 @@ exports.handler = async (event) => {
                     Tagging: attr_tag_container
                 };
                 var out = await s3.putObject(s3_params).promise();
-                console.debug(out)
+                console.debug('s3.putObject response', out);
 
-                // Clear the data so we have a clean start point
+                // Whack the data so we have a clean start point
                 s3ObjectData = []
                 wavBufferArray = []
 
@@ -157,81 +212,33 @@ exports.handler = async (event) => {
                 processedRecordCount = processedRecordCount + 1;
                 console.info('record' + totalRecordCount + 'result ContactID: ' + currentContactID + ' -  Write complete');
                 responseContainer['record' + totalRecordCount + 'result'] = ' ContactID: ' + currentContactID + ' -  Write complete';
+                streamFinished = true;
             });
-            
-            var response
-            
-            // Get the data endpoint for the LIST_FRAGMENTS api call
-            response = await kinesisvideo.getDataEndpoint({
-                StreamARN: streamARN,
-                APIName: "LIST_FRAGMENTS"
-            }).promise();
-            
-            console.debug(response);
-            
-            // Set the archive media api endpoint
-            kinesisvideoarchivedmedia.endpoint = new AWS.Endpoint(response.DataEndpoint);
-            
-            // List fragments for the stream and timestamps
-            response = await kinesisvideoarchivedmedia.listFragments({
-                StreamARN: streamARN,
-                MaxResults: 1000,
-                FragmentSelector: {
-                    FragmentSelectorType: "SERVER_TIMESTAMP",
-                    TimestampRange: {
-                        StartTimestamp: startTimestamp,
-                        EndTimestamp: stopTimestamp
-                    }
-                }
-            }).promise();
-            
-            console.debug(response);
-            
-            // Map the fragments to ony return a string array with fragment numbers
-            var fragmentNumberList = response.Fragments.map((fragment) => {
-                return fragment.FragmentNumber
-            });
-        
-            // Sort the fragments by fragment number to get them in the correct order
-            var fragmentNumberList = fragmentNumberList.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-            
-            // Get the data endpoint for the GET_MEDIA_FOR_FRAGMENT_LIST api call
-            response = await kinesisvideo.getDataEndpoint({
-                StreamARN: streamARN,
-                APIName: "GET_MEDIA_FOR_FRAGMENT_LIST"
-            }).promise();
-            
-            console.debug(response);
-            
-            // Set the archive media api endpoint
-            kinesisvideoarchivedmedia.endpoint = new AWS.Endpoint(response.DataEndpoint);
-            
-            // Get the media for the sorted fragment list
-            var request = kinesisvideoarchivedmedia.getMediaForFragmentList({
-                StreamARN: streamARN,
-                Fragments: fragmentNumberList
-            })
 
-            var listener = AWS.EventListeners.Core.HTTP_DATA;
+            // Set params for the stream
+            var stream_params = {
+                APIName: "GET_MEDIA",
+                StreamName: streamName
+            };
 
-            request.removeListener('httpData', listener);
-            request.on('httpData', function (chunk, response) {
-                decoder.write(chunk);
-            });
-            request.on('httpDone', function (response) {
-                wavOutputStream.write(Buffer.concat(wavBufferArray));
-                wavOutputStream.end();
-            });
-            request.send();
-        } 
-        catch (e) {
+            // Extract data from stream for processing using the data extraction function
+            var data = await kinesisvideo.getDataEndpoint(stream_params).promise();
+            console.debug(data)
+            kinesisvideomedia.endpoint = new AWS.Endpoint(data.DataEndpoint);
+
+            await parseNextFragmentNew(streamARN, startFragmentNum.toString(), null);
+
+            //waiting until the recorded stream
+            await done();
+
+        } catch (e) {
             console.error(e)
             console.error('FAIL: Counld write audio to S3');
             responseContainer['record' + totalRecordCount + 'result'] = ' ContactID: ' + currentContactID + ' -  Failed to write audio to S3';
         }
     };
 
-    // return the resonse for ALL records processed
+    // return the resonse for ALL records
     var summary = 'Complete. Processed ' + processedRecordCount + ' of ' + totalRecordCount + ' records.';
 
     const response = {
@@ -247,9 +254,28 @@ exports.handler = async (event) => {
     return response;
 };
 
-function parseISOString (dateString) {
-    console.debug('dateString', dateString);
-    
-    const b = dateString.split(/\D+/);
-    return new Date(Date.UTC(b[0], --b[1], b[2], b[3], b[4], b[5], b[6]));
+// Data extraction function
+async function parseNextFragmentNew(streamArn, fragmentNumber, contToken) {
+    var fragment_paramsData = {
+        StartSelector: {
+            StartSelectorType: 'FRAGMENT_NUMBER',
+            AfterFragmentNumber: fragmentNumber,
+        },
+        StreamName: streamArn.split('/')[1]
+    };
+
+    return new Promise((resolve, reject) => {
+        var listener = AWS.EventListeners.Core.HTTP_DATA;
+        var request = kinesisvideomedia.getMedia(fragment_paramsData);
+        request.removeListener('httpData', listener);
+        request.on('httpData', function (chunk, response) {
+            decoder.write(chunk);
+        });
+        request.on('httpDone', function (response) {
+            wavOutputStream.write(Buffer.concat(wavBufferArray));
+            wavOutputStream.end();
+            resolve({});
+        });
+        request.send();
+    });
 }
