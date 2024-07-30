@@ -1,4 +1,3 @@
-# Version: 2024.07.03
 """
 **********************************************************************************************************************
  *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -28,6 +27,7 @@ import os
 logger = logging.getLogger()
 
 def lambda_handler(event, context):
+    logger.debug('VMX3 Version: ' + os.environ['package_version'])
     logger.debug(event)
 
     # Establish an empty response

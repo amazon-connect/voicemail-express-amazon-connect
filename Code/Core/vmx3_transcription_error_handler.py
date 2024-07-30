@@ -26,6 +26,7 @@ import logging
 logger = logging.getLogger()
 
 def lambda_handler(event, context):
+    logger.debug('VMX3 Version: ' + os.environ['package_version'])
     
     # Print event
     logger.debug(event)

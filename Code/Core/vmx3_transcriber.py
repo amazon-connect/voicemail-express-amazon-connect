@@ -27,6 +27,7 @@ import time
 logger = logging.getLogger()
 
 def lambda_handler(event, context):
+    logger.debug('VMX3 Version: ' + os.environ['package_version'])
     logger.debug(event)
 
     # Grab incoming data elements from the S3 event
