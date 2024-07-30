@@ -48,7 +48,7 @@ var kinesisvideo = new AWS.KinesisVideo({ region: process.env.aws_region });
 var kinesisvideomedia = new AWS.KinesisVideoMedia({ region: process.env.aws_region });
 
 exports.handler = async (event) => {
-
+    console.debug('VMX3 Version: ' + process.env.package_version)
     console.debug(event);
 
     // Establish a response container

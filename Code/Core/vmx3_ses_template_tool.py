@@ -1,4 +1,3 @@
-# Version: 2024.07.03
 """
 **********************************************************************************************************************
  *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -24,6 +23,7 @@ ses_client = boto3.client('sesv2')
 logger = logging.getLogger()
 
 def lambda_handler(event, context):
+    logger.debug('VMX3 Version: ' + os.environ['package_version'])
     if event['mode'] == 'create':
         # Creates the template using the provided values
         try:

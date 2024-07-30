@@ -1,4 +1,3 @@
-# Version: 2024.07.03
 """
 **********************************************************************************************************************
  *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -34,6 +33,7 @@ logger = logging.getLogger()
 connect_client = boto3.client('connect')
 
 def lambda_handler(event, context):
+    logger.debug('VMX3 Version: ' + os.environ['package_version'])
     logger.debug(event)
 
     # Process the record
