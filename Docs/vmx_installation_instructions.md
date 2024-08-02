@@ -3,14 +3,18 @@ This document will walk you through the steps required to deploy the Voicemail E
 
 In order to deploy this template, you must first complete the [installation prerequisites](vmx_prerequistes.md). Once those are complete, you can continue with the process below.
 
-## Gather Required Information
+## Gather Required Information (All deployments)
 Voicemail Express is deployed via AWS CloudFormation. In order to launch the template, you will need the following information:
-- ARN for the Amazon Kinesis data stream used for streaming your CTRs from the [Amazon Kinesis Data streams console](https://console.aws.amazon.com/kinesis/home)
-  - **IMPORTANT NOTE:** This solution is designed to receive CTRs via Kinesis Data Streams only, not Kinesis Firehose. It WILL NOT work with a Kinesis firehose.
-- Amazon Connect Instance Alias from the [Amazon Connect console](https://console.aws.amazon.com/connect/home)
-- Amazon Connect Instance ARN from the [Amazon Connect console](https://console.aws.amazon.com/connect/home)
-- Default agent ID to use for testing
-- Default queue ARN to use for testing
+-  ARN for the Amazon Kinesis data stream used for streaming your CTRs from the [Amazon Kinesis Data streams console](https://console.aws.amazon.com/kinesis/home)
+   - **IMPORTANT NOTE:** This solution is designed to receive CTRs via Kinesis Data Streams only, not Kinesis Firehose. It WILL NOT work with a Kinesis firehose.
+-  Amazon Connect Instance Alias from the [Amazon Connect console](https://console.aws.amazon.com/connect/home)
+-  Amazon Connect Instance ARN from the [Amazon Connect console](https://console.aws.amazon.com/connect/home)
+-  Default agent ID to use for testing
+-  Default queue ARN to use for testing
+
+## Gather Required Information (Email deployments **ONLY**)
+-  Default FROM email address. This will be the default address used to send emails FROM if no other address is configured or provided.
+-  Default TO email address. This will be the default address used to send emails TO if no other address is configured or provided. 
 
 Once you have the required information, you are ready to continue with the deployment.
 
@@ -18,16 +22,16 @@ Once you have the required information, you are ready to continue with the deplo
 The next step is to deploy the CloudFormation template. This template builds all of the AWS resources required to make Voicemail Express work.
 1.  Open a new broser tab and then log into the [AWS console](https://console.aws.amazon.com/console/home). Be sure to set your region to match the region you have deployed Amazon Connect to, then return here.
 1.  Select the link below that matches your region to launch the template:
-    - us-east-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-us-east-1.s3.us-east-1.amazonaws.com/vmx3/2024.07.03/cloudformation/vmx3.yaml)
-    - us-west-2 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-us-west-2.s3.us-west-2.amazonaws.com/vmx3/2024.07.03/cloudformation/vmx3.yaml)
-    - af-south-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=af-south-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-af-south-1.s3.af-south-1.amazonaws.com/vmx3/2024.07.03/cloudformation/vmx3.yaml)
-    - ap-southeast-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=ap-southeast-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-ap-southeast-1.s3.ap-southeast-1.amazonaws.com/vmx3/2024.07.03/cloudformation/vmx3.yaml)
-    - ap-southeast-2 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=ap-southeast-2#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-ap-southeast-2.s3.ap-southeast-2.amazonaws.com/vmx3/2024.07.03/cloudformation/vmx3.yaml)
-    - ap-northeast-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=ap-northeast-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-ap-northeast-1.s3.ap-northeast-1.amazonaws.com/vmx3/2024.07.03/cloudformation/vmx3.yaml)
-    - ap-northeast-2 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=ap-northeast-2#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-ap-northeast-2.s3.ap-northeast-2.amazonaws.com/vmx3/2024.07.03/cloudformation/vmx3.yaml)
-    - ca-central-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=ca-central-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-ca-central-1.s3.ca-central-1.amazonaws.com/vmx3/2024.07.03/cloudformation/vmx3.yaml)
-    - eu-central-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=eu-central-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-eu-central-1.s3.eu-central-1.amazonaws.com/vmx3/2024.07.03/cloudformation/vmx3.yaml)
-    - eu-west-2 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=eu-west-2#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-eu-west-2.s3.eu-west-2.amazonaws.com/vmx3/2024.07.03/cloudformation/vmx3.yaml)
+    - us-east-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-us-east-1.s3.us-east-1.amazonaws.com/vmx3/2024.08.01/cloudformation/vmx3.yaml)
+    - us-west-2 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-us-west-2.s3.us-west-2.amazonaws.com/vmx3/2024.08.01/cloudformation/vmx3.yaml)
+    - af-south-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=af-south-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-af-south-1.s3.af-south-1.amazonaws.com/vmx3/2024.08.01/cloudformation/vmx3.yaml)
+    - ap-southeast-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=ap-southeast-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-ap-southeast-1.s3.ap-southeast-1.amazonaws.com/vmx3/2024.08.01/cloudformation/vmx3.yaml)
+    - ap-southeast-2 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=ap-southeast-2#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-ap-southeast-2.s3.ap-southeast-2.amazonaws.com/vmx3/2024.08.01/cloudformation/vmx3.yaml)
+    - ap-northeast-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=ap-northeast-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-ap-northeast-1.s3.ap-northeast-1.amazonaws.com/vmx3/2024.08.01/cloudformation/vmx3.yaml)
+    - ap-northeast-2 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=ap-northeast-2#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-ap-northeast-2.s3.ap-northeast-2.amazonaws.com/vmx3/2024.08.01/cloudformation/vmx3.yaml)
+    - ca-central-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=ca-central-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-ca-central-1.s3.ca-central-1.amazonaws.com/vmx3/2024.08.01/cloudformation/vmx3.yaml)
+    - eu-central-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=eu-central-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-eu-central-1.s3.eu-central-1.amazonaws.com/vmx3/2024.08.01/cloudformation/vmx3.yaml)
+    - eu-west-2 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=eu-west-2#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-eu-west-2.s3.eu-west-2.amazonaws.com/vmx3/2024.08.01/cloudformation/vmx3.yaml)
 1.  Verify that the **Amazon S3 URL** is for the same region you are deploying to, then select **Next**
 1.  Update the stack name to include your instance alias, for example such as `VMX3-MyInstanceName`
 1.  **Complete the parameters** using the information that you have gathered.

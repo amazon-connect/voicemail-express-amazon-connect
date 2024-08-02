@@ -3,10 +3,15 @@ Voicemail Express is designed to provide basic voicemail functionality to Amazon
 
 ![Voicemail Express Architecture](Docs/Img/VMX3.png)
 
-## What's new in VMX3 (2024.07.03)
--  Updated KVS to S3 function to reduce error conditions in environments with heavy KVS use or long retention windows.
--  Updated all Lambda functions to use the native Lambda logging configuration
--  Changed code/template buckets to further seperate from VMX2
+## What's new in VMX3 (2024.08.01)
+-  Rewrote KVStoS3 function in Python, completing converstion of code to Python 3.12
+-  Switched to the GetMediaForFragmentList API for Kinesis Video Streams Archived Media to extract the audio from KVS.
+-  Adopted native Lambda logging in all functions and improved logging
+-  Improved error handling in all functions
+-  Removed the Node common layer
+-  Load-tested 1,000s of voicemails
+-  Improved [Troubleshooting](Docs/vmx_troubleshooting.md) section
+-  Added [Getting Support](Docs/vmx_support.md)
 
 ### How it works
 With Voicemail Express, customers can have the option to leave a voicemail for an agent or queue. Once the voicemail is recorded, a series of processes take place in the following order:
@@ -37,7 +42,7 @@ Finally, some basic troubleshooting steps can be found on the [Troubleshooting C
 ## Roadmap
 The following items are currently planned for future releases. Changes to roadmap depend on feedback, however one overarching tenent of VocieMail Express is to keep the solution lightweight, with a minimal number of required services and administration, and to replace funcitonality with Native Amazon Connect features as soon as they become available. 
 -  **Jul-Sep 2024**
-   -  Update KVStoS3 function to Python
+   -  Update KVStoS3 function to Python **Delivered**
    -  Example flows
    -  Notification Option
    -  GenAI summary option
@@ -46,10 +51,10 @@ The following items are currently planned for future releases. Changes to roadma
    -  Optional delivery mode add-ins: Allows you to add additional delivery modes as desired. The next batch of delivery modes will be:
       -  Salesforce Case
       -  Salesforce custom objects
-   -  Reduce layer size for default deployments
+   -  Reduce layer size for default deployments **Delivered**
    -  Reduce complexity and number of functions
    -  Support for GitHub sync
       
 
-**Current Published Version:** 2024.07.03
+**Current Published Version:** 2024.08.01
 Current published version is the version of the code and templates that has been deployed to our S3 buckets
