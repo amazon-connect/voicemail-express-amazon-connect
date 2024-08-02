@@ -1,4 +1,5 @@
-"""
+current_version = '2024.08.01'
+'''
 **********************************************************************************************************************
  *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
  *                                                                                                                    *
@@ -13,17 +14,34 @@
  *  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS *
  *  IN THE SOFTWARE.                                                                                                  *
  **********************************************************************************************************************
-"""
+'''
+
+# Import the necessary modules for this function
 import json
 import boto3
 import logging
 import os
 
-ses_client = boto3.client('sesv2')
+# Establish logging configuration
 logger = logging.getLogger()
 
 def lambda_handler(event, context):
-    logger.debug('VMX3 Version: ' + os.environ['package_version'])
+    # Debug lines for troubleshooting
+    logger.debug('Code Version: ' + current_version)
+    logger.debug('VMX3 Package Version: ' + os.environ['package_version'])
+    logger.debug(event)
+
+    # Establish needed clients and resources
+    try:
+        ses_client = boto3.client('sesv2')
+        logger.debug('********** Clients initialized **********')
+    
+    except Exception as e:
+        logger.error('********** VMX Initialization Error: Could not establish needed clients **********')
+        logger.error(e)
+
+        return {'status':'complete','result':'ERROR','reason':'Failed to Initialize clients'}
+
     if event['mode'] == 'create':
         # Creates the template using the provided values
         try:
@@ -35,10 +53,13 @@ def lambda_handler(event, context):
                     'Html': event['template_html']
                 }
             )
+            logger.debug('********** Template Created **********')
+            logger.debug(create_template)
 
             return 'Template creation succeeded'
 
         except Exception as e:
+            logger.error('Template creation failed')
             logger.error(e)
 
             return 'Template creation failed'
@@ -47,6 +68,8 @@ def lambda_handler(event, context):
         try:
             # Retrieves the template using the test data
             get_template = ses_client.get_email_template(TemplateName=event['template_name'])
+            logger.debug('********** Template retrieved **********')
+            logger.debug(get_template)
 
             #  Removes the API response header
             get_template.pop('ResponseMetadata')
@@ -55,6 +78,7 @@ def lambda_handler(event, context):
             return(str(get_template))
 
         except Exception as e:
+            logger.error('********** Template retrieval failed **********')
             logger.error(e)
 
             return 'Template retrieval failed'
@@ -70,10 +94,13 @@ def lambda_handler(event, context):
                     'Html': event['template_html']
                 }
             )
+            logger.debug('********** Template updated **********')
+            logger.debug(create_template)
 
             return 'Template update succeeded'
 
         except Exception as e:
+            logger.error('********** Template update failed **********')
             logger.error(e)
 
             return 'Template update failed'
@@ -85,8 +112,12 @@ def lambda_handler(event, context):
             template_delete = ses_client.delete_email_template(
                 TemplateName = event['template_name']
             )
+            logger.debug('********** Template deleted **********')
+            logger.debug(template_delete)
+
             return event['template_name'] + ' template deleted.'
 
         except Exception as e:
+            logger.error('********** Template failed to delete **********')
             logger.error(e)
             return 'Template delete failed'

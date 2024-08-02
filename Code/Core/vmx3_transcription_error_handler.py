@@ -1,5 +1,5 @@
-# Version: 2024.07.03
-"""
+current_version = '2024.08.01'
+'''
 **********************************************************************************************************************
  *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
  *                                                                                                                    *
@@ -14,7 +14,7 @@
  *  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS *
  *  IN THE SOFTWARE.                                                                                                  *
  **********************************************************************************************************************
-"""
+'''
 
 # Import the necessary modules for this function
 import json
@@ -26,21 +26,38 @@ import logging
 logger = logging.getLogger()
 
 def lambda_handler(event, context):
-    logger.debug('VMX3 Version: ' + os.environ['package_version'])
-    
-    # Print event
+    # Debug lines for troubleshooting
+    logger.debug('Code Version: ' + current_version)
+    logger.debug('VMX3 Package Version: ' + os.environ['package_version'])
     logger.debug(event)
     
-    # Establish S3 client
-    s3_client = boto3.client('s3')
+    # Establish needed clients and resources
+    try:
+        s3_client = boto3.client('s3')
+        logger.debug('********** Clients initialized **********')
+    
+    except Exception as e:
+        logger.error('********** VMX Initialization Error: Could not establish needed clients **********')
+        logger.error(e)
+
+        return {'status':'complete','result':'ERROR','reason':'Failed to Initialize clients'}
     
     # Extract the needed content
-    original_transcript_key = event['detail']['TranscriptionJobName']
-    transcript_key = original_transcript_key[5:]
-    transcript_job = transcript_key.replace('.json','')
-    contact_id = transcript_job.split('_',1)[0]
-    transcript_bucket = os.environ['s3_transcripts_bucket']
-    aws_account = event['account']
+    try:
+        original_transcript_key = event['detail']['TranscriptionJobName']
+        transcript_key = original_transcript_key[5:]
+        transcript_job = transcript_key.replace('.json','')
+        contact_id = transcript_job.split('_',1)[0]
+        transcript_bucket = os.environ['s3_transcripts_bucket']
+        aws_account = event['account']
+
+        logger.debug('********** Successfully extracted data **********')
+
+    except Exception as e:
+        logger.error('********** Could not extract required data **********')
+        logger.error(e)
+
+        return {'status':'complete','result':'ERROR','reason':'Failed to extract data'}
     
     # Establish the default failure message
     message_content = {
@@ -57,9 +74,14 @@ def lambda_handler(event, context):
     }
     
     # Write the error message to S3, mimicking the normal transcription process.
-    response = s3_client.put_object(Body=json.dumps(message_content), Bucket=transcript_bucket, Key=original_transcript_key)
-    
-    logger.debug('Voicemail with contact id ' + contact_id + ' could not be transcribed.')
-    
-    return response
-    
+    try:
+        response = s3_client.put_object(Body=json.dumps(message_content), Bucket=transcript_bucket, Key=original_transcript_key)
+        logger.info('Voicemail with contact id ' + contact_id + ' could not be transcribed.')
+
+        return response
+
+    except Exception as e:
+        logger.error('********** Could not write message **********')
+        logger.error(e)
+
+        return {'status':'complete','result':'ERROR','reason':'Failed to write event'}
