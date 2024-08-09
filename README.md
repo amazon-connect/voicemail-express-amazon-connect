@@ -50,18 +50,18 @@ Finally, a list of recent changes be found on the [Changelog](Docs/vmx_changelog
 ## Roadmap
 The following items are currently planned for future releases. Changes to roadmap depend on feedback, however one overarching tenet of Vociemail Express is to keep the solution lightweight, with a minimal number of required services and administration, and to replace functionality with native Amazon Connect features as soon as they become available. 
 -  **Jul-Sep 2024**
-   -  Update KVStoS3 function to Python **Delivered**
-   -  Example flows
-   -  Notification Option
-   -  GenAI summary option
-   -  Lambda VPC Option
+   -  [x] Update KVStoS3 function to Python
+   -  [ ] Example flows
+   -  [ ] Notification Option
+   -  [ ] GenAI summary option
+   -  [ ] Lambda VPC Option
 -  **Sep-Dec 2024**
-   -  Optional delivery mode add-ins: Allows you to add additional delivery modes as desired. The next batch of delivery modes will be:
-      -  Salesforce Case
-      -  Salesforce custom objects
-   -  Reduce layer size for default deployments **Delivered**
-   -  Reduce complexity and number of functions
-   -  Support for GitHub sync
+   -  [ ] Optional delivery mode add-ins: Allows you to add additional delivery modes as desired. The next batch of delivery modes will be:
+      -  [ ] Salesforce Case
+      -  [ ] Salesforce custom objects
+   -  [x] Reduce layer size for default deployments
+   -  [ ] Reduce complexity and number of functions
+   -  [ ] Support for GitHub sync
 
 ## Current Published Version
 ### 2024.08.01
