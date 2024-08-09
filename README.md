@@ -63,5 +63,5 @@ The following items are currently planned for future releases. Changes to roadma
    -  Reduce complexity and number of functions
    -  Support for GitHub sync
 
-**Current Published Version:** 2024.08.01
+## Current Published Version 2024.08.01
 Current published version is the version of the code and templates that has been deployed to our S3 buckets
