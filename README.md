@@ -72,4 +72,4 @@ While the code and documentation has been predominantly pushed by [Jason Douglas
 
 -  [Jason Douglas](https://github.com/dougjaso): Base solution design, roadmap, feature maangement, brute force Python developer, nitpicker.
 -  [Steve Earl](https://github.com/SteveEarl-AWS): (Converted) Python code developer, (Formerly) NodeJS code developer, KVS processing magician, remodler of cabins.
--  [Rob Pittfield](https://github.com/robpittfield2): Load testing mastermind, community relations, herder of cats.
+-  [Rob Pittfield](https://github.com/robpittfield2): Load testing mastermind, community relations, professional-grade sanity checker, herder of cats.
