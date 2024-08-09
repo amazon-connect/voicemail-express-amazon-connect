@@ -1,5 +1,5 @@
 # Upgrade Voicemail Express
-When new versions of Voicemail Express are release, you can easily upgrade to the latest version using the **Update** feature of Amazon Cloudwatch. There are a few considerations that you will need to note prior to the upgrade:
+When new versions of Voicemail Express are release, you can easily upgrade to the latest version using the **Update** feature of Amazon CloudFormation. There are a few considerations that you will need to note prior to the upgrade:
 
 1.  The upgrade process will overwrite any customizations that you have made. Best practice is to note the modifications you have made so that they can be migrated to the new version. You can also create your own versions of the contact flows and Lambda functions, if you like. That will allow for deployment without overwriting your existing modifications
 1.  When you load the new template, it will retain the previous settings. You **must** make sure to change the template version field at the bottom to get the new version.
@@ -20,4 +20,4 @@ When new versions of Voicemail Express are release, you can easily upgrade to th
 1. 	Scroll to the bottom and select **Next**
 1. 	Scroll to the bottom, select the boxes to **acknowledge that IAM resources will be created**
 1.  Select **Submit**
-1.  The deployment will take 3-5 minutes. During this time, multiple nested stacks will be deployed. Once the main stack shows **UPDATE_COMPLETE**, your deployment of Voicemail Express is complete. 
+1.  The deployment will take 3-5 minutes. During this time, multiple nested stacks will be deployed. Once the main stack shows **UPDATE_COMPLETE**, your deployment of Voicemail Express is complete.

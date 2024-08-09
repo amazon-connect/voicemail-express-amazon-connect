@@ -2,7 +2,7 @@
 Voicemail Express provides basic voicemail functionality for Amazon Connect Customers. It has been designed to be easy to deploy and maintain. As such, there is a limited feature stack, and few administrative options, however all of the code is open and customizable to fit different customer needs. This page will provide a foundational understanding of how it works.
 
 ## High-Level Flow
-Voicemails are captured in the Amazon Connect contact flow, processed post-call, and delivered as Amazon Connect Tasks. Here is a quick overview of the basic steps in the process:
+Voicemails are captured in the Amazon Connect contact flow, processed post-call, and delivered as Amazon Connect Tasks or as emails (depending on your configuration). Here is a quick overview of the basic steps in the process:
 1.  Customer calls in, is provided the option to leave a voicemail (for whatever reason), and decides to do so.
 1.  Specific contact attributes are set to mark the contact as having a voicemail
 1.  An Amazon Kinesis Video Stream (KVS) is initialized to record the audio from the customer

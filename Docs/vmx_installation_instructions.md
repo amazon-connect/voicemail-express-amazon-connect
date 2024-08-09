@@ -20,7 +20,7 @@ Once you have the required information, you are ready to continue with the deplo
 
 ## Delploy the Cloudformation Template
 The next step is to deploy the CloudFormation template. This template builds all of the AWS resources required to make Voicemail Express work.
-1.  Open a new broser tab and then log into the [AWS console](https://console.aws.amazon.com/console/home). Be sure to set your region to match the region you have deployed Amazon Connect to, then return here.
+1.  Open a new browser tab and then log into the [AWS console](https://console.aws.amazon.com/console/home). Be sure to set your region to match the region you have deployed Amazon Connect to, then return here.
 1.  Select the link below that matches your region to launch the template:
     - us-east-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-us-east-1.s3.us-east-1.amazonaws.com/vmx3/2024.08.01/cloudformation/vmx3.yaml)
     - us-west-2 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-us-west-2.s3.us-west-2.amazonaws.com/vmx3/2024.08.01/cloudformation/vmx3.yaml)
@@ -48,13 +48,24 @@ The next step is to deploy the CloudFormation template. This template builds all
 1.  Set the contact flow for the number to **VMX3-AWSTestFlow-YOURINSTANCE**.
 1.  Select **Save**
 
-## Test Voicemail
-Now that the Voicemail Express has been deployed, you are ready to test.
-1.  **Dial** the phone number you configured for the Voicemail Test Line
-1.  At the next menu, **press 1** to leave a voicemail for an agent or **press 2** to leave a voicemail for a queue
+## Test Voicemail Delivery as an Amazon Connect Task
+If you have deployed Voicemail Express with the Amazon Connect Tasks delivery option, you can validate functionality by performing the following test.
+1.  **Dial** the phone number you configured for the Voicemail Test Line.
+1.  At the first menu, **press 1** to select Task delivery.
+1.  At the next menu, **press 1** to leave a voicemail for an agent or **press 2** to leave a voicemail for a queue.
 1.  When you hear the tone, **record your voicemail**. Hang up at any time after recording a message.
     - **NOTE:** If you have just enabled KVS on your instance for the first time, you may hear an error message. Simply hang up and try again. It should work the second time. KVS streams are not created until first use, which will throw an error in your contact flow.
 1.  Once you have completed the recording, **wait approximately 2 minutes**.
 1.  Log the appropriate agent in and put them into the available state. The Task should arrive shortly.
+
+## Test Voicemail Delivery as an Email using Amazon Simple Email Service (SES)
+If you have deployed Voicemail Express with the email delivery option, you can validate functionality by performing the following test.
+1.  **Dial** the phone number you configured for the Voicemail Test Line.
+1.  At the first menu, **press 3** to select email delivery.
+1.  At the next menu, **press 1** to leave a voicemail for an agent or **press 2** to leave a voicemail for a queue.
+1.  When you hear the tone, **record your voicemail**. Hang up at any time after recording a message.
+    - **NOTE:** If you have just enabled KVS on your instance for the first time, you may hear an error message. Simply hang up and try again. It should work the second time. KVS streams are not created until first use, which will throw an error in your contact flow.
+1.  Once you have completed the recording, **wait approximately 2 minutes**.
+1.  Access the appropriate email box to verify delivery of the voicemail.
 
 **Voicemail Validation is complete!**

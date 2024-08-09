@@ -154,7 +154,7 @@ Parameters:
       - 5
       - 6
       - 7
-    Description: Number of days recordings are accessible via link. This is limited 
+    Description: Number of days recordings are accessible via link. This is limited by the maximum amount of time that a presigned URL can be active.
   VMDefaultMode:
     Type: String
     Default: AmazonConnectTask
