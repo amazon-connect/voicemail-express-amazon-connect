@@ -131,7 +131,7 @@ Parameters:
     Description: When recordings expire, do you want to delete the recording, keep it, or move it to Glacier?
   EXPTemplateVersion:
     Type: String
-    Default: 2024.07.03
+    Default: 2024.08.01
     Description: Template version. DO NOT CHANGE.
   LambdaLoggingLevel:
     Type: String
@@ -142,7 +142,6 @@ Parameters:
       - WARN
       - INFO
       - DEBUG
-      - TRACE
     Description: Default is Info. This can be changed later. Details on logging can be found at https://docs.aws.amazon.com/lambda/latest/dg/monitoring-cloudwatchlogs.html#monitoring-cloudwatchlogs-runtime-logging
   RecordingsExpireInXDays:
     Type: String
@@ -155,7 +154,7 @@ Parameters:
       - 5
       - 6
       - 7
-    Description: Number of days recordings are accessible via link. This is limited 
+    Description: Number of days recordings are accessible via link. This is limited by the maximum amount of time that a presigned URL can be active.
   VMDefaultMode:
     Type: String
     Default: AmazonConnectTask

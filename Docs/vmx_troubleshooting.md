@@ -13,6 +13,9 @@ Below are some common problems customers have encountered with the appropriate r
 -  Once you validate that the file was created, look to see if there were any errors in the VMXTranscriber function. Depending on how closely you are monitoring progression, you can also look in the Transcribe console to see if the Transcription process is still running, completed, or returned an error.
 
 ## General Issues
+### Voicemails fail on the KVS to S3 step. Error log shows a message similar to "End timestamp 1723065467000 is outside of the stream retention period"
+This typically means that your KVS stream has been configured with no retention period, and the audio data is gone. Set the retention period for your KVS streams to 1 hour.
+
 ### The voicemail audio is garbled when I play it back
 Voicemail Express uses the Amazon Kinesis Video Stream to capture the recording. It is only expecting there to be one audio stream, from the customer, when it begins recording. If you have selected both **From the customer** and **To the customer** when initializing your KVS stream in your contact flow, the VMXKVStoS3 function will attempt to mix the two channels together, causing garbled audio. Make sure that you are only enabling the **From the customer** option when starting streaming.
 

@@ -1,5 +1,5 @@
-# Version: 2024.07.03
-"""
+current_version = '2024.08.01'
+'''
 **********************************************************************************************************************
  *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
  *                                                                                                                    *
@@ -14,7 +14,7 @@
  *  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS *
  *  IN THE SOFTWARE.                                                                                                  *
  **********************************************************************************************************************
-"""
+'''
 
 # Import the necessary modules for this function
 import json
@@ -27,8 +27,22 @@ import time
 logger = logging.getLogger()
 
 def lambda_handler(event, context):
-    logger.debug('VMX3 Version: ' + os.environ['package_version'])
+     # Debug lines for troubleshooting
+    logger.debug('Code Version: ' + current_version)
+    logger.debug('VMX3 Package Version: ' + os.environ['package_version'])
     logger.debug(event)
+
+    # Establish needed clients and resources
+    try:
+        s3_client = boto3.client('s3')
+        logger.debug('********** Clients initialized **********')
+    
+    except Exception as e:
+        logger.error('********** VMX Initialization Error: Could not establish needed clients **********')
+        logger.error(e)
+        
+        return {'status':'complete','result':'ERROR','reason':'Failed to Initialize clients'}
+
 
     # Grab incoming data elements from the S3 event
     try:
@@ -37,15 +51,16 @@ def lambda_handler(event, context):
         contact_id = recording_name.replace('.wav','')
         recording_bucket = event['detail']['bucket']['name']
         recording_region = event['region']
+        logger.debug('********** Successfully set vars from S3 event **********')
 
     except Exception as e:
+        logger.error('********** Failed to extract data from event **********')
         logger.error(e)
-        logger.debug('Record Result: Failed to extract data from event')
-        return {'result':'Failed to extract data from event'}
+        
+        return {'status':'complete','result':'ERROR','reason':'Failed to extract data from event'}
 
     # Establish the S3 client and get the object tags
     try:
-        s3_client = boto3.client('s3')
         object_data = s3_client.get_object_tagging(
             Bucket=recording_bucket,
             Key=recording_key
@@ -57,19 +72,24 @@ def lambda_handler(event, context):
         for i in object_tags:
             loaded_tags.update({i['Key']:i['Value']})
 
+        logger.debug('********** Successfully loaded object tags **********')
+
     except Exception as e:
+        logger.error('********** Failed to load tags from object **********')
         logger.error(e)
-        logger.debug('Record Result: Failed to extract tags from object')
-        return {'result':'Failed to extract tags from object'}
+        
+        return {'status':'complete','result':'ERROR','reason':'Failed to load tags from object'}
 
     # Build the Recording URL
     try:
         recording_url = 'https://{0}.s3-{1}.amazonaws.com/{2}'.format(recording_bucket, recording_region, recording_key)
+        logger.debug('********** Successfully generated recording URL **********')
 
     except Exception as e:
+        logger.error('********** Failed to generate recording URL **********')
         logger.error(e)
-        logger.debug('Record Result: Failed to generate recording URL')
-        return {'result':'Failed to generate recording URL'}
+        
+        return {'status':'complete','result':'ERROR','reason':'Failed to generate recording URL'}
 
     # Do the transcription
     try:
@@ -86,15 +106,12 @@ def lambda_handler(event, context):
             },
             OutputBucketName=os.environ['s3_transcripts_bucket']
         )
+        logger.debug('********** Transcribe job submitted **********')
+
+        return {'status': 'complete','result': 'voicemail processed'}
 
     except Exception as e:
+        logger.error('********** Transcription job rejected **********')
         logger.error(e)
-        logger.debug('Record Result: Transcription job failed')
-        return {'result':'Transcription job failed'}
-
-    logger.debug('Record Result: Success!')
-
-    return {
-        'status': 'complete',
-        'result': 'record processed'
-    }
+        
+        return {'status':'complete','result':'ERROR','reason':'Transcription job rejected'}

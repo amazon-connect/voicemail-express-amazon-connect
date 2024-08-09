@@ -100,31 +100,6 @@ Resources:
           - !Ref ConnectInstanceAlias
       LicenseInfo: https://aws.amazon.com/apache-2-0
 
-  VMXNodeLayer:
-    Type: AWS::Lambda::LayerVersion
-    Properties:
-      CompatibleRuntimes:
-        - nodejs18.x
-      Content:
-        S3Bucket:
-          !Join
-            - ''
-            - - !Ref EXPDevBucketPrefix
-              - 'vmx-source-'
-              - !Ref AWSRegion
-        S3Key:
-          !Join
-          - ''
-          - - 'vmx3/'
-            - !Ref EXPTemplateVersion
-            - /zip/vmx3_common_node.zip
-      Description: Provides dependencies code and functions for Node.js Lambda functions that augment the Service Cloud Voice offering from Salesforce
-      LayerName: !Join
-        - ''
-        - - 'common_node_layer_'
-          - !Ref ConnectInstanceAlias
-      LicenseInfo: https://aws.amazon.com/apache-2-0
-
   VMXPresigner:
     Type: AWS::Lambda::Function
     Properties:
@@ -279,7 +254,7 @@ Resources:
           - ''
           - - 'vmx3/'
             - !Ref EXPTemplateVersion
-            - /zip/vmx3_kvs_to_s3.js.zip
+            - /zip/vmx3_kvs_to_s3.py.zip
       Description: Extracts the voicemail from the KVS stream and writes it to S3 with tag data
       Environment:
         Variables:
@@ -294,10 +269,10 @@ Resources:
             - ''
             - - 'VMX3-KVStoS3-'
               - !Ref ConnectInstanceAlias
-      Handler: vmx3_kvs_to_s3.handler
+      Handler: vmx3_kvs_to_s3.lambda_handler
       Role: !Ref VMXCoreRoleArn
-      Layers: [!Ref VMXNodeLayer]
-      Runtime: nodejs18.x
+      Layers: [!Ref VMXPythonLayer]
+      Runtime: python3.12
       LoggingConfig:
         ApplicationLogLevel:
           Ref: LambdaLoggingLevel

@@ -1,5 +1,5 @@
-# Version: 2024.07.03
-"""
+current_version = '2024.08.01'
+'''
 **********************************************************************************************************************
  *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
  *                                                                                                                    *
@@ -14,23 +14,36 @@
  *  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS *
  *  IN THE SOFTWARE.                                                                                                  *
  **********************************************************************************************************************
-"""
+'''
 
-# Import the necessary modules for this flow to work
+# Import the necessary modules for this function
 import json
-import os
-import logging
 import boto3
+import logging
+import os
 
+# Establish logging configuration
 logger = logging.getLogger()
 
-connect_client = boto3.client('connect')
-ses_client = boto3.client('sesv2')
-
 def vmx3_to_ses_email(writer_payload):
-
-    logger.info('Beginning Voicemail to email')
+    # Debug lines for troubleshooting
+    logger.debug('Code Version: ' + current_version)
+    logger.debug('VMX3 Package Version: ' + os.environ['package_version'])
     logger.debug(writer_payload)
+
+    # Establish needed clients and resources
+    try:
+        connect_client = boto3.client('connect')
+        ses_client = boto3.client('sesv2')
+        logger.debug('********** Clients initialized **********')
+    
+    except Exception as e:
+        logger.error('********** VMX Initialization Error: Could not establish needed clients **********')
+        logger.error(e)
+
+        return {'status':'complete','result':'ERROR','reason':'Failed to Initialize clients'}
+    
+    logger.debug('Beginning Voicemail to email')
 
     # Identify the proper address to send the email FROM
     if 'email_from' in writer_payload['json_attributes']:
@@ -39,12 +52,16 @@ def vmx3_to_ses_email(writer_payload):
     else:
         vmx3_email_from_address = os.environ['default_email_from']
 
+    logger.debug(vmx3_email_from_address)
+
     # Set destination address
     try:
         vmx3_email_target_address = writer_payload['entity_email']
 
     except:
         vmx3_email_target_address = os.environ['default_email_target']
+
+    logger.debug(vmx3_email_target_address)
 
     if '@' in vmx3_email_target_address:
         logger.info('Valid email address format')
@@ -84,11 +101,13 @@ def vmx3_to_ses_email(writer_payload):
                 }
             }
         )
+        logger.debug('********** Email request sent **********')
+        logger.debug(send_email)
 
         return 'success'
 
     except Exception as e:
+        logger.error('********** Failed to send email **********')
         logger.error(e)
-        logger.error('Failed to send email.')
 
         return 'fail'

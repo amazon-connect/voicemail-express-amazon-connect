@@ -2,7 +2,7 @@
 Voicemail Express provides basic voicemail functionality for Amazon Connect Customers. It has been designed to be easy to deploy and maintain. As such, there is a limited feature stack, and few administrative options, however all of the code is open and customizable to fit different customer needs. This page will provide a foundational understanding of how it works.
 
 ## High-Level Flow
-Voicemails are captured in the Amazon Connect contact flow, processed post-call, and delivered as Amazon Connect Tasks. Here is a quick overview of the basic steps in the process:
+Voicemails are captured in the Amazon Connect contact flow, processed post-call, and delivered as Amazon Connect Tasks or as emails (depending on your configuration). Here is a quick overview of the basic steps in the process:
 1.  Customer calls in, is provided the option to leave a voicemail (for whatever reason), and decides to do so.
 1.  Specific contact attributes are set to mark the contact as having a voicemail
 1.  An Amazon Kinesis Video Stream (KVS) is initialized to record the audio from the customer
@@ -31,7 +31,7 @@ Voicemails are captured in the Amazon Connect contact flow, processed post-call,
 In order for the voicemail system to work, contacts must have certain contact attributes set. The following attributes are used:
 -  **vmx3_flag (Required)**: (0,1) this attribute flags the call as requiring processing by the Voicemail Express. All new voicemails should have this value set to `1`. When the packager function completes, it will update the value to `0`. If this value is set to anything other than `1` or is missing altogether, the voicemail system will ignore the CTR and voicemail processing WILL NOT HAPPEN.
     -  Example: 'vmx3_flag':'1'
--  **vmx3_from (Reqiured)**: (customer phone in E.164 format) this attribute indicates the phone number of the customer. This should be set using the System attribute of `Customer number` ($.CustomerEndpoint.Address) or set this to a phone number provided by the customer. It should always be in E.164 format.
+-  **vmx3_from (Required)**: (customer phone in E.164 format) this attribute indicates the phone number of the customer. This should be set using the System attribute of `Customer number` ($.CustomerEndpoint.Address) or set this to a phone number provided by the customer. It should always be in E.164 format.
     -  Example: 'vmx3_from':'+15555551212'
 -  **vmx3_queue_arn (Required)**: (ARN) the Amazon Resource Number of the queue that this voicemail should belong to. In most cases, it makes most practical sense to first set the appropriate queue as the working queue, then to set this attribute using the System attribute of `Queue ARN` ($.Queue.ARN). This is critical as the Lambda functions use the queue ARN to determine the target queue, instance ID, queue mode (agent vs queue), etc.
     -  Example: 'vmx3_queue_arn':'arn:aws:connect:us-east-1:YOURACCOUNTNUMBER:instance/YOURINSTANCEID/queue/YOURQUEUEID'

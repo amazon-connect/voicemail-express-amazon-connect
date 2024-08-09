@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Schema type="mide" version="2" readversion="2">
+  <!-- Base EBML elements. Required. -->
+  <MasterElement name="EBML" id="0x1A45DFA3" mandatory="1" multiple="0" minver="1">Set the EBML characteristics of the data to follow. Each EBML document has to start with this.
+      <UIntegerElement name="EBMLVersion" id="0x4286" multiple="0" mandatory="1" default="1" minver="1">The version of EBML parser used to create the file.</UIntegerElement>
+      <UIntegerElement name="EBMLReadVersion" id="0x42F7" multiple="0" mandatory="1" default="1" minver="1">The minimum EBML version a parser has to support to read this file.</UIntegerElement>
+      <UIntegerElement name="EBMLMaxIDLength" id="0x42F2" multiple="0" mandatory="1" default="4" minver="1">The maximum length of the IDs you'll find in this file (4 or less in Matroska).</UIntegerElement>
+      <UIntegerElement name="EBMLMaxSizeLength" id="0x42F3" multiple="0" mandatory="1" default="8" minver="1">The maximum length of the sizes you'll find in this file (8 or less in Matroska). This does not override the element size indicated at the beginning of an element. Elements that have an indicated size which is larger than what is allowed by EBMLMaxSizeLength shall be considered invalid.</UIntegerElement>
+      <StringElement name="DocType" id="0x4282" multiple="0" mandatory="1" default="mide" minver="1">A string that describes the type of document that follows this EBML header. 'mide' for Mide Instrumentation Data Exchange files.</StringElement>
+      <UIntegerElement name="DocTypeVersion" id="0x4287" multiple="0" mandatory="1" default="2" minver="1">The version of DocType interpreter used to create the file.</UIntegerElement>
+      <UIntegerElement name="DocTypeReadVersion" id="0x4285" multiple="0" mandatory="1" default="2" minver="1">The minimum DocType version an interpreter has to support to read this file.</UIntegerElement>
+      <BinaryElement name="Void" global="1" id="0xEC" multiple="1" minver="1">Used to void damaged data, to avoid unexpected behaviors when using damaged data. The content is discarded. Also used to reserve space in a sub-element for later use.</BinaryElement>
+      <BinaryElement name="CRC-32" global="1" id="0xBF" multiple="0" minver="1" webm="0">The CRC is computed on all the data of the Master element it's in. The CRC element should be the first in it's parent master for easier reading. All level 1 elements should include a CRC-32. The CRC in use is the IEEE CRC32 Little Endian</BinaryElement>
+      <MasterElement name="SignatureSlot" global="1" id="0x1B538667" multiple="1" webm="0">Contain signature of some (coming) elements in the stream.
+          <UIntegerElement name="SignatureAlgo" id="0x7E8A" multiple="0" webm="0">Signature algorithm used (1=RSA, 2=elliptic).</UIntegerElement>
+          <UIntegerElement name="SignatureHash" id="0x7E9A" multiple="0" webm="0">Hash algorithm used (1=SHA1-160, 2=MD5).</UIntegerElement>
+          <BinaryElement name="SignaturePublicKey" id="0x7EA5" multiple="0" webm="0">The public key to use with the algorithm (in the case of a PKI-based signature).</BinaryElement>
+          <BinaryElement name="Signature" id="0x7EB5" multiple="0" webm="0">The signature of the data (until a new.</BinaryElement>
+          <MasterElement name="SignatureElements" id="0x7E5B" multiple="0" webm="0">Contains elements that will be used to compute the signature.
+              <MasterElement name="SignatureElementList" id="0x7E7B" multiple="1" webm="0">A list consists of a number of consecutive elements that represent one case where data is used in signature. Ex: <i>Cluster|Block|BlockAdditional</i> means that the BlockAdditional of all Blocks in all Clusters is used for encryption.
+                  <BinaryElement name="SignedElement" id="0x6532" multiple="1" webm="0">An element ID whose data will be used to compute the signature.</BinaryElement>
+              </MasterElement>
+          </MasterElement>
+      </MasterElement>
+  </MasterElement>
+
+  <!-- Mide format global tags. Support required for all .mide schemas. -->
+  <!-- Since the generating device may be very memory-constrained, and these tags may be repeated periodically for streaming, we use a short (global) element ID and generally allow them at any level -->
+  <UIntegerElement name="SchemaID" global="1" id="0xFE" minver="1">Device EBML schema (aka 'tagset') hint. Points to a numeric schema ID defined at the receiving side.</UIntegerElement>
+  <BinaryElement name="Sync" global="1" id="0xFA" minver="1">Used to provide an arbitrary length sync word (for network / stream framing purposes) at any point in the stream.</BinaryElement>
+  <!--<BinaryElement name="Discontinuity" global="1" id="0xFD" minver="1">Probably replaced by a flag in individual datablocks at the Channel level.</BinaryElement>  -->
+  <IntegerElement name="ElementTag" global="1" id="0xFC" minver="1">Arbitrary tag. Allow for separate opening and closing tags without knowing the length of the enclosed data in advance. I.e. instead of [tag len value=[subtag len... /]/], [tag len=0][subtags and contents][/tag]. Positive value corresponds to the corresponding ElementID as an opening tag; the corresponding negative value as the closing tag. Value -int_max for any int size is reserved.</IntegerElement>
+
+<!-- Slam Stick X Manifest tags -->
+
+<!-- NOTES: -->
+<!-- This is completely independent from the portable instrumentation schema. Under normal circumstances, nobody should have to read this data directly. It is internal housekeeping for the recording device. -->
+
+<!-- Overall USERPAGE structure -->
+    <!-- The USERPAGE is 2KBytes (0x0000 ~ 0x07FF) and will store the complete Manifest and calibration entries. -->
+    <!-- 0x0000: (uint16-le) offset to start of Manifest -->
+    <!-- 0x0002: (uint16-le) length of Manifest -->
+    <!-- 0x0004: (uint16-le) offset to start of factory calibration info -->
+    <!-- 0x0006: (uint16-le) length of factory cal block -->
+    <!-- 0x0008: (uint16-le) offset to start of canned RecordingProperties -->
+    <!-- 0x000A: (uint16-le) length of canned RecordingProperties -->
+    <!-- (0x000C ~ 0x000F reserved) -->
+    <!-- 0x0010: Recommended starting offset of Manifest. If the number of unique sections, indicated by offset/length entries as above, exceeds this value, division between section offset/length entries and first payload will be determined by the offset of the Manifest. -->
+
+    <!-- Manifest structure -->
+    <!-- Consists of a DeviceManifest master tag and its subelements as shown below. The SystemInfo and Battery entries are required. -->
+    <!-- The remaining entries are optional, but strongly recommended, for the first Slam Stick product (defaults will be used); required if different from the defaults. -->
+    <!-- Note, the production device implements a proper EBML parser for this stuff, so the "length" values shown for struct-like access are retained only as a note to the implementer regarding max. payload size for the field.-->
+
+    <!-- Config structure -->
+    <!-- Consists of the ConfigurationList master element and children, exactly as it will appear in the output. -->
+    <!-- Entry 0 contains a single ValuePolynomial corresponding to the 3-axis accelerometer (channel 0) -->
+    <!-- Entries 1-3 contain a ValuePolynomial and optional TempCoPolynomial corresponding to accelerometer subchannels 0..2, respectively. -->
+
+
+    <MasterElement name="DeviceManifest" level="0" id="0x184D414E" mandatory="0" multiple="0" minver="1">Class D (4 byte + 2 length) Device Manifest master. Presence of this master tells the device a valid manifest is present.
+        <MasterElement name="SystemInfo" id="0x4D00" mandatory="0" multiple="0" minver="1">Class B (2 byte + 2 length) Master element for the basic system info (serial#, etc).
+            <UIntegerElement name="SerialNumber" id="0x4D01" mandatory="1" multiple="0" minver="1" length="4">4-byte Vendor-defined (MIDE) product serial number.</UIntegerElement>
+            <UIntegerElement name="DeviceTypeUID" id="0x4D02" mandatory="1" multiple="0" minver="1" length="4">4-byte Unique hardware configuration ID used to distinguish recorder types/variants.</UIntegerElement>
+            <StringElement name="ProductName" id="0x4D03" mandatory="1" multiple="0" minver="1">20-byte Displayable text name for this product/variant.</StringElement>
+            <UIntegerElement name="HwRev" id="0x4D04" mandatory="1" multiple="0" minver="1" length="2">Hardware revision code for this DeviceTypeUID.</UIntegerElement>
+            <!-- FwRev and FwRevString, if applicable, are hardcoded in the FW itself and don't need a Manifest schema entry, They do, however, have a MIDE schema entry under RecorderInfo. -->
+            <UIntegerElement name="MinFwRev" id="0x4D05" mandatory="1" multiple="0" minver="1" length="2">Minimum FW revision code required to support this hardware.</UIntegerElement>
+            <UIntegerElement name="DateOfManufacture" id="0x4D06" mandatory="1" multiple="0" minver="1" length="8">8-byte date/time of manufacture (initial programming) in UTC seconds since the Epoch.</UIntegerElement>
+            <!--<UIntegerElement name="Vdd" id="0x4D07" mandatory="1" multiple="0" minver="1" length="3">Vdd value in mV.</UIntegerElement>-->
+            <!--<UIntegerElement name="Vref" id="0x4D08" mandatory="1" multiple="0" minver="1" length="3">ADC Vref value in mV.</UIntegerElement>-->
+            <StringElement name="PartNumber" id="0x4D09" mandatory="1" multiple="0" minver="1">Device part number string (e.g. VR002-100-XYZ).</StringElement>
+            <StringElement name="HwCustomStr" id="0x4D0A" mandatory="0" multiple="0" minver="1">Custom hardware identifier. Hardware is a custom version if present.</StringElement>
+            <StringElement name="FwCustomStr" id="0x4D0B" mandatory="0" multiple="0" minver="1">Custom firmware build. Firmware is a custom build if present. Name should match FW branch/tag name as applicable for identification purposes, but is mainly present so FW updater can generate a warning if a custom build will be replaced by a standard one.</StringElement>
+            <UIntegerElement name="HwAPI" id="0x4D0C" mandatory="0" multiple="0" minver="1">Hardware API level of this hardware. This is bumped in response to hardware revs with compatibility implications.</UIntegerElement>
+            <StringElement name="BatchIDStr" id="0x4D0D" mandatory="0" multiple="0" minver="1">Batch identification string. Text string encoding the date, variant and manufacturer of a given hardware batch. Batch is independent of HwRev as there may be multiple production batches of a given revision, from multiple fab houses.</StringElement>
+        </MasterElement>
+        <!-- Battery Info -->
+        <MasterElement name="Battery" id="0x4D10" mandatory="0" multiple="0" minver="1">Class B (2 byte + 2 length) Master element for battery info.
+            <UIntegerElement name="Capacity_mAh" id="0x4D11" mandatory="0" multiple="0" minver="1">4-byte Nominal battery capacity in mAh.</UIntegerElement>
+            <UIntegerElement name="Vddscale_full_thresh" id="0x4D12" mandatory="0" multiple="0" minver="1">1-byte ACMP Vdd scale value corresponding to battery full threshold (0 ~ 63).</UIntegerElement>
+            <UIntegerElement name="Vddscale_ok_thresh" id="0x4D13" mandatory="0" multiple="0" minver="1">1-byte ACMP Vdd scale value corresponding to battery 'ok' threshold (0 ~ 63).</UIntegerElement>
+            <UIntegerElement name="Vddscale_low_thresh" id="0x4D14" mandatory="0" multiple="0" minver="1">1-byte ACMP Vdd scale value corresponding to low-battery alarm threshold (0 ~ 63).</UIntegerElement>
+            <UIntegerElement name="Vddscale_dead_thresh" id="0x4D15" mandatory="0" multiple="0" minver="1">1-byte ACMP Vdd scale value corresponding to low-battery poweroff threshold (0 ~ 63).</UIntegerElement>
+            <UIntegerElement name="Vsd" id="0x4D16" mandatory="1" multiple="0" minver="1">Hardware cutoff voltage value in mV.</UIntegerElement>
+        </MasterElement>
+        <!-- Information about the antialiasing filter bank, if present. -->
+        <MasterElement name="AAFilterInfo" id="0x4D20" mandatory="0" multiple="0" minver="1">Class B (2 byte + 2 length) Master element for the antialiasing filter info.
+            <UIntegerElement name="FilterResponse" id="0x4D21" mandatory="1" multiple="0" minver="1">1-byte filter type code (0=Butterworth, others currently undefined).</UIntegerElement>
+            <UIntegerElement name="FilterOrder" id="0x4D22" mandatory="1" multiple="0" minver="1">1-byte filter order value.</UIntegerElement>
+            <UIntegerElement name="ClockToCornerRatio" id="0x4D23" mandatory="1" multiple="0" minver="1">2-byte Ratio between input clock frequency and resulting filter corner frequency (clock-tunable filters only).</UIntegerElement>
+            <UIntegerElement name="FMin" id="0x4D24" mandatory="1" multiple="0" minver="1">4-byte Minimum allowed corner frequency in Hz.</UIntegerElement>
+            <UIntegerElement name="FMax" id="0x4D25" mandatory="1" multiple="0" minver="1">4-byte Maximum allowed corner frequency in Hz.</UIntegerElement>
+            <UIntegerElement name="Bypassable" id="0x4D26" mandatory="1" multiple="0" minver="1">1-byte Boolean specifying that filter bypass is supported (low-fidelity data acquisition allowed in the disabled state). Nonzero = true.</UIntegerElement>
+        </MasterElement>
+        <!-- Specifies one arbitrary analog sensor. -->
+        <MasterElement name="AnalogSensorInfo" id="0x4D30" mandatory="0" multiple="1" minver="1">Class B (2 byte + 2 length) Master element for one analog sensor of one or more channels.
+            <UIntegerElement name="AnalogSensorEntryID" id="0x4D31" mandatory="0" multiple="0" minver="1">1-byte Locally unique ID for referencing this entry. Used as ChannelID.</UIntegerElement>
+            <UIntegerElement name="AnalogSensorDeviceCode" id="0x4D32" mandatory="0" multiple="0" minver="1">1-byte Code identifying the analog sensor. 0 = ADXL001, 1 = 832M1, others=TBD.</UIntegerElement>
+            <StringElement name="AnalogSensorSerialNumber" id="0x4D33" mandatory="0" multiple="0" minver="1">16-byte string for the sensor manufacturer's serial #. This is a string because some vendors (including that of 832M1) love to mix in letters, hyphens and other nonnumeric elements.</StringElement>
+            <!-- Units? Probably handled bo 'plot'; device does not need to know. -->
+            <UIntegerElement name="AnalogSensorUsesAAFilter" id="0x4D34" mandatory="0" multiple="0" minver="1">1-byte Boolean specifies that this sensor goes through the AA filter. Nonzero = true.</UIntegerElement>
+            <UIntegerElement name="AnalogSensorSettlingTime" id="0x4D35" mandatory="0" multiple="0" minver="1">2-byte Sensor start up + settling time in ticks (1/32768s)</UIntegerElement>
+            <StringElement name="AnalogSensorName" id="0x4D36" mandatory="0" multiple="0" minver="1">16-byte string for the sensor name / part#. This will probably be overridden by 'Plot'.</StringElement>
+            <UIntegerElement name="AnalogSensorCalIDRef" id="0x4D37" mandatory="0" multiple="0" minver="1">1-byte Reference to a SensorChannel-level CalID. This cal entry will simply determine the fixed sensor scaling and offset.</UIntegerElement>
+            <IntegerElement name="AnalogSensorScaleHintI" id="0x4D38" mandatory="0" multiple="0" minver="1">4-byte int32 hint expressing the nominal sensor scale and whether it is inverted. For sensors (accelerometer) where one of several nominal sensitivities can be stuffed. This value is optionally used by the device to distinguish stuffed sensitivities without having to interpret a calibration element.</IntegerElement>
+            <FloatElement name="AnalogSensorScaleHintF" id="0x4D39" mandatory="0" multiple="0" minver="1">4-byte float hint expressing the nominal sensor scale and whether it is inverted. For sensors (accelerometer) where one of several nominal sensitivities can be stuffed. This value is optionally used by the device to distinguish stuffed sensitivities without having to interpret a calibration element.</FloatElement>
+            <MasterElement name="AnalogSensorChannel" id="0x4D50" mandatory="0" multiple="1" minver="1">Class B (2 byte + 2 length) Master element for one sensor channel.
+                <UIntegerElement name="AnalogSensorChannelEntryID" id="0x4D51" mandatory="0" multiple="0" minver="1">1-byte Entry ID for this channel.</UIntegerElement>
+                <UIntegerElement name="AnalogSensorChannelADCChannel" id="0x4D52" mandatory="0" multiple="0" minver="1">1-byte ADC channel number corresponding to this sensor channel.</UIntegerElement>
+                <StringElement name="AnalogSensorChannelAxisName" id="0x4D53" mandatory="0" multiple="0" minver="1">16-byte Axis name associated with this sensor channel.</StringElement>
+                <UIntegerElement name="AnalogSensorChannelCalIDRef" id="0x4D54" mandatory="0" multiple="0" minver="1">1-byte Reference to a SensorSubChannel-level CalID. This will store actual sensor calibration modifying the basic scale/offset parameters.</UIntegerElement>
+                <UIntegerElement name="AnalogSensorBWLowerCutoff" id="0x4D55" mandatory="0" multiple="0" minver="1">4-byte Lower cutoff frequency in Hz.</UIntegerElement>
+                <UIntegerElement name="AnalogSensorBWUpperCutoff" id="0x4D56" mandatory="0" multiple="0" minver="1">4-byte Upper cutoff frequency in Hz.</UIntegerElement>
+                <UIntegerElement name="AnalogSensorChannelCTF" id="0x4D57" mandatory="0" multiple="0" minver="1" default="1">CTF filter.</UIntegerElement>
+            </MasterElement>
+        </MasterElement>
+        <!-- Codes for specific digital sensors and storage devices. We can't make this all-singing-all-dancing generic, but can at least tell the FW if specific sensors at known e.g. bus locations are stuffed or not. -->
+        <!-- Media elements (SD, eventually wireless/etc.?) -->
+        <MasterElement name="DigitalStorageSD" id="0x4D80" mandatory="0" multiple="0" minver="1">Indicates the presence of a uSD card on the SPI bus.</MasterElement>
+
+        <!-- Digital inertial sensors (accelerometer, gyro, IMU, etc.) -->
+        <MasterElement name="DigitalSensorADXL362" id="0x4D90" mandatory="0" multiple="0" minver="1">Indicates the presence of an ADXL362 accelerometer on the SPI bus.</MasterElement>
+        <MasterElement name="DigitalSensorADXL345" id="0x4D91" mandatory="0" multiple="0" minver="1">Indicates the presence of an ADXL345 accelerometer on the SPI bus.</MasterElement>
+        <MasterElement name="DigitalSensorADXL355" id="0x4DD4" mandatory="0" multiple="0" minver="1">Indicates the presence of an ADXL355 accelerometer on the SPI bus.
+            <UIntegerElement name="SensorConfig" id="0x4E00" mandatory="0" multiple="0" minver="1">Configuration data for digital sensors. Value varies by hardware.</UIntegerElement>
+        </MasterElement>
+        <MasterElement name="DigitalSensorADXL357" id="0x4DD5" mandatory="0" multiple="0" minver="1">Indicates the presence of an ADXL357 accelerometer on the SPI bus.
+            <UIntegerElement name="SensorConfig" id="0x4E00" mandatory="0" multiple="0" minver="1">Configuration data for digital sensors. Value varies by hardware.</UIntegerElement>
+        </MasterElement>
+        <MasterElement name="DigitalSensorADXL375" id="0x4D92" mandatory="0" multiple="0" minver="1">Indicates the presence of an ADXL375 accelerometer on the SPI bus.</MasterElement>
+        <MasterElement name="DigitalSensorBNO055" id="0x4D93" mandatory="0" multiple="0" minver="1">Indicates the presence of a BNO055 IMU on the I2C0 bus.</MasterElement>
+        <MasterElement name="DigitalSensorBHI160" id="0x4D94" mandatory="0" multiple="0" minver="1">Indicates the presence of a Bosch BHI160 IMU on the I2C0 bus.
+            <UIntegerElement name="SensorConfig" id="0x4E00" mandatory="0" multiple="0" minver="1">Configuration data for digital sensors. Value varies by hardware.</UIntegerElement>
+        </MasterElement>
+        <MasterElement name="DigitalSensorBMG250" id="0x4D95" mandatory="0" multiple="0" minver="1">Indicates the presence of a BMG250 Gyroscope</MasterElement>
+        <MasterElement name="DigitalSensorBMG250Int" id="0x4D96" mandatory="0" multiple="0" minver="1">Indicates the presence of a BMG250 Gyroscope, with an interrupt line</MasterElement>
+
+        <!-- Digital pressure/other sensors -->
+        <MasterElement name="DigitalSensorMPL3115A2" id="0x4DA0" mandatory="0" multiple="0" minver="1">Indicates the presence of an MPL3115A2 P/T sensor on the I2C0 bus.</MasterElement>
+        <MasterElement name="DigitalSensorMS8607" id="0x4DA1" mandatory="0" multiple="0" minver="1">Indicates the presence of an MS8607 P/T/H sensor on the I2C1 bus.</MasterElement>
+        <MasterElement name="DigitalSensorMS5637" id="0x4DA2" mandatory="0" multiple="0" minver="1">Indicates the presence of an MS5637 pressure sensor on the I2C1 bus.</MasterElement>
+        <MasterElement name="DigitalSensorHTU21D" id="0x4DA3" mandatory="0" multiple="0" minver="1">Indicates the presence of an HTU21D humidity sensor on the I2C1 bus.</MasterElement>
+
+        <!-- Timing/Sync inputs -->
+        <MasterElement name="DigitalSensorIR" id="0x4DB0" mandatory="0" multiple="0" minver="1">Indicates the presence of a digital IR sensor.</MasterElement>
+
+        <!-- GPS/Sync inputs -->
+        <MasterElement name="DigitalSensorGPS_UART" id="0x4DC0" mandatory="0" multiple="0" minver="1">Indicates the presence of a GPS with full data (location) broken out on UART.</MasterElement>
+        <MasterElement name="DigitalSensorGPS_CAMM8" id="0x4DC1" mandatory="0" multiple="0" minver="1">Indicates the presence of a GPS with full data (location) broken out on UART.
+            <UIntegerElement name="SensorConfig" id="0x4E00" mandatory="0" multiple="0" minver="1">Configuration data for digital sensors. Value varies by hardware.</UIntegerElement>
+        </MasterElement>
+
+        <!-- Battery charger ICs -->
+        <MasterElement name="ChargerMCP73837" id="0x4D60" mandatory="0" multiple="0" minver="1">Indicates the presence of a MCP73837 battery charger.</MasterElement>
+        <MasterElement name="ChargerMAX14747" id="0x4D61" mandatory="0" multiple="0" minver="1">Indicates the presence of a MAX14747 battery charger.</MasterElement>
+        <MasterElement name="ChargerNONE"     id="0x4D6F" mandatory="0" multiple="0" minver="1">Indicates the presence of no battery charger or just a single cell battery.</MasterElement>
+
+
+        <!-- Communication -->
+        <MasterElement name="CommunicationWiFi_ESP32" id="0x4D70" mandatory="0" multiple="0" minver="1">Indicates the presence of an ESP32 Wi-Fi module.</MasterElement>
+
+        <!-- Misc. -->
+        <MasterElement name="DigitalSensorReset" id="0x4DD0" mandatory="0" multiple="0" minver="1">Indicates the presence of a hardware pushbutton reset controller.</MasterElement>
+        <MasterElement name="DigitalPowerMAX77801" id="0x4DD1" mandatory="0" multiple="0" minver="1">Indicates the presence of a MAX77801 power management IC on the I2C1 bus.</MasterElement>
+        <MasterElement name="DigitalLedThree" id="0x4DD2" mandatory="0" multiple="0" minver="1">Indicates that the membrane has a 3rd LED driven by the MCU.</MasterElement>
+        <MasterElement name="DigitalSensorSI1133" id="0x4DD3" mandatory="0" multiple="0" minver="1">Indicates the presence of a SI1133 light sensor on the I2C1 bus.</MasterElement>
+        
+        <!-- Analog Out -->
+        <MasterElement name="PeripheralHeater" id="0x4F00" mandatory="0" multiple="0" minver="1">Indicates the presence of an analog heater device.
+            <UIntegerElement name="PeripheralConfig" id="0x4F01" mandatory="0" multiple="0" minver="1">Configuration data for non-sensor peripherals. For the heater, it is the output power in milliwatts.</UIntegerElement>
+        </MasterElement>
+		
+		
+
+</MasterElement>
+</Schema>

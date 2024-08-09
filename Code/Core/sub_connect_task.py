@@ -1,5 +1,5 @@
-# Version: 2024.07.03
-"""
+current_version = '2024.08.01'
+'''
 **********************************************************************************************************************
  *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
  *                                                                                                                    *
@@ -14,7 +14,7 @@
  *  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS *
  *  IN THE SOFTWARE.                                                                                                  *
  **********************************************************************************************************************
-"""
+'''
 
 # Import the necessary modules for this flow to work
 import json
@@ -25,13 +25,26 @@ import boto3
 # Establish logging configuration
 logger = logging.getLogger()
 
-connect_client = boto3.client('connect')
-
 def vmx3_to_connect_task(writer_payload):
 
-    logger.info('Beginning Voicemail to Task')
+    # Debug lines for troubleshooting
+    logger.debug('Code Version: ' + current_version)
+    logger.debug('VMX3 Package Version: ' + os.environ['package_version'])
     logger.debug(writer_payload)
 
+    # Establish needed clients and resources
+    try:
+        connect_client = boto3.client('connect')
+        logger.debug('********** Clients initialized **********')
+    
+    except Exception as e:
+        logger.error('********** VMX Initialization Error: Could not establish needed clients **********')
+        logger.error(e)
+
+        return {'status':'complete','result':'ERROR','reason':'Failed to Initialize clients'}
+
+    logger.debug('Beginning Voicemail to Task')
+    
     # Check for a task flow to use, if not, use default
     if 'vmx3_task_flow' in writer_payload['json_attributes']:
         if writer_payload['json_attributes']['vmx3_task_flow']:
@@ -69,11 +82,13 @@ def vmx3_to_connect_task(writer_payload):
             Description=writer_payload['json_attributes']['transcript_contents'],
             ClientToken=writer_payload['contact_id']
         )
+        logger.debug('********** Task Created **********')
+        logger.debug(create_task)
 
         return 'success'
 
     except Exception as e:
+        logger.error('********** Failed to create task **********')
         logger.error(e)
-        logger.error('Failed to create task.')
 
         return 'fail'

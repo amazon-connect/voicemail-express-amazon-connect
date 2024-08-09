@@ -1,4 +1,5 @@
-"""
+current_version = '2024.08.01'
+'''
 **********************************************************************************************************************
  *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
  *                                                                                                                    *
@@ -13,7 +14,7 @@
  *  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS *
  *  IN THE SOFTWARE.                                                                                                  *
  **********************************************************************************************************************
-"""
+'''
 
 # Import the necessary modules for this function
 import json
@@ -27,29 +28,38 @@ import os
 logger = logging.getLogger()
 
 def lambda_handler(event, context):
-    logger.debug('VMX3 Version: ' + os.environ['package_version'])
+    
+    # Debug lines for troubleshooting
+    logger.debug('Code Version: ' + current_version)
+    logger.debug('VMX3 Package Version: ' + os.environ['package_version'])
     logger.debug(event)
 
     # Establish an empty response
     response = {}
+
     # Set the default result to success
     response.update({'result':'success'})
 
     # Retrieve credentials from AWS Secrets Manager
     try:
         use_keys = get_secret()
+        logger.debug('********** Successfully retrieved keys **********')
 
     except Exception as e:
+        logger.error('********** Key retrieval failed **********')
         logger.error(e)
-        response.update({'result':'fail'})
-        response.update({'detail':'key retrieval failed'})
+        
+        response.update({'status':'complete','result':'ERROR','reason':'key retrieval failed'})
+
         return response
 
     # Configure the environment for the URL generation and initialize s3 client
     try:
-
+        # Set the region to match the recording location
         use_region = os.environ['aws_region']
+        logger.debug('Using region: ' + use_region)
 
+        # Set the sig version and config options
         my_config = Config(
             region_name = use_region,
             signature_version = 's3v4',
@@ -59,7 +69,7 @@ def lambda_handler(event, context):
             }
         )
 
-        client = boto3.client(
+        s3_client = boto3.client(
             's3',
             endpoint_url = 'https://s3.' + use_region + '.amazonaws.com',
             aws_access_key_id = use_keys['vmx_iam_key_id'],
@@ -67,42 +77,52 @@ def lambda_handler(event, context):
             config=my_config
         )
 
+        logger.debug('********** S3 client initialized with localiation and parameters **********')
+
     except Exception as e:
+        logger.error('********** S3 client failed to initialize **********')
         logger.error(e)
-        response.update({'result':'fail'})
-        response.update({'detail':'s3 client init failed'})
+        response.update({'status':'complete','result':'ERROR','reason':'s3 client init failed'})
+
         return response
 
     # Generate the presigned URL and return
     try:
-        presigned_url = client.generate_presigned_url('get_object',
+        presigned_url = s3_client.generate_presigned_url('get_object',
             Params = {'Bucket': event['recording_bucket'],
                     'Key': event['recording_key']},
             ExpiresIn = int(os.environ['s3_obj_lifecycle'])*86400
         )
+
+        logger.debug('********** Presigned URL Generated successfully **********')
+        logger.debug('Presigned URL: ' + presigned_url)
         response.update({'presigned_url': presigned_url})
 
         return response
 
     except Exception as e:
+        logger.error('********** Presigned URL Failed to generate **********')
         logger.error(e)
-        response.update({'result':'fail'})
-        response.update({'detail':'presigned url generation failed'})
-        logger.debug(response)
+        response.update({'status':'complete','result':'ERROR','reason':'presigned url generation failed'})
+
         return response
 
 # Sub to retrieve the secrets from Secrets Manager
 def get_secret():
-    # Set vars
+    # Set response container
     secret_response = {}
+
+    # Set secrets environment
     try:
         secret_name = os.environ['secrets_key_id']
         region_name = os.environ['aws_region']
+        logger.debug('********** Secrets environment vars set **********')
 
     except Exception as e:
+        logger.error('********** Secrets environment vars failed to set **********')
         logger.error(e)
-        secret_response.update({'result':'fail'})
-        secret_response.update({'detail':'environment vars failed'})
+        secret_response.update({'status':'complete','result':'ERROR','reason':'environment vars failed'})
+
         return secret_response
 
     # Create a Secrets Manager session
@@ -113,24 +133,30 @@ def get_secret():
             region_name=region_name
         )
 
+        logger.debug('********* Secrets session initialized **********')
+
     except Exception as e:
+        logger.error('********** Secrets session failed to initialize **********')
         logger.error(e)
-        secret_response.update({'result':'fail'})
-        secret_response.update({'detail':'AWS Secrets Manager session failed'})
+        secret_response.update({'status':'complete','result':'ERROR','reason':'AWS Secrets Manager session failed'})
+
         return secret_response
 
+    # Get the secrets
     try:
         get_secret_value_response = client.get_secret_value(
             SecretId=secret_name
         )
         secret = get_secret_value_response['SecretString']
+        secret_response.update(json.loads(secret))
 
-    except Exception as e:
-        logger.error(e)
-        secret_response.update({'result':'fail'})
-        secret_response.update({'detail':'failed to get secrets'})
+        logger.debug('********** Successfully retrieved secrets **********')
+
         return secret_response
 
-    secret_response.update(json.loads(secret))
+    except Exception as e:
+        logger.error('********** Failed to get secrets **********')
+        logger.error(e)
+        secret_response.update({'status':'complete','result':'ERROR','reason':'failed to get secrets'})
 
-    return secret_response
+        return secret_response

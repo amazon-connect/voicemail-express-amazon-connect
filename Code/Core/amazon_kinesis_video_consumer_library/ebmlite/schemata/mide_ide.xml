@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Schema type="mide" version="2" readversion="2">
+    <!-- Base EBML elements. Required. -->
+    <MasterElement name="EBML" id="0x1A45DFA3" mandatory="1" multiple="0" minver="1">Set the EBML characteristics of the data to follow. Each EBML document has to start with this.
+        <UIntegerElement name="EBMLVersion" id="0x4286" multiple="0" mandatory="1" default="1" minver="1">The version of EBML parser used to create the file.</UIntegerElement>
+        <UIntegerElement name="EBMLReadVersion" id="0x42F7" multiple="0" mandatory="1" default="1" minver="1">The minimum EBML version a parser has to support to read this file.</UIntegerElement>
+        <UIntegerElement name="EBMLMaxIDLength" id="0x42F2" multiple="0" mandatory="1" default="4" minver="1">The maximum length of the IDs you'll find in this file (4 or less in Matroska).</UIntegerElement>
+        <UIntegerElement name="EBMLMaxSizeLength" id="0x42F3" multiple="0" mandatory="1" default="8" minver="1">The maximum length of the sizes you'll find in this file (8 or less in Matroska). This does not override the element size indicated at the beginning of an element. Elements that have an indicated size which is larger than what is allowed by EBMLMaxSizeLength shall be considered invalid.</UIntegerElement>
+        <StringElement name="DocType" id="0x4282" multiple="0" mandatory="1" default="mide" minver="1">A string that describes the type of document that follows this EBML header. 'mide' for Mide Instrumentation Data Exchange files.</StringElement>
+        <UIntegerElement name="DocTypeVersion" id="0x4287" multiple="0" mandatory="1" default="2" minver="1">The version of DocType interpreter used to create the file.</UIntegerElement>
+        <UIntegerElement name="DocTypeReadVersion" id="0x4285" multiple="0" mandatory="1" default="2" minver="1">The minimum DocType version an interpreter has to support to read this file.</UIntegerElement>
+        <BinaryElement name="Void" global="1" id="0xEC" multiple="1" minver="1">Used to void damaged data, to avoid unexpected behaviors when using damaged data. The content is discarded. Also used to reserve space in a sub-element for later use.</BinaryElement>
+        <BinaryElement name="CRC-32" global="1" id="0xBF" multiple="0" minver="1" webm="0">The CRC is computed on all the data of the Master element it's in. The CRC element should be the first in it's parent master for easier reading. All level 1 elements should include a CRC-32. The CRC in use is the IEEE CRC32 Little Endian</BinaryElement>
+        <MasterElement name="SignatureSlot" global="1" id="0x1B538667" multiple="1" webm="0">Contain signature of some (coming) elements in the stream.
+            <UIntegerElement name="SignatureAlgo" id="0x7E8A" multiple="0" webm="0">Signature algorithm used (1=RSA, 2=elliptic).</UIntegerElement>
+            <UIntegerElement name="SignatureHash" id="0x7E9A" multiple="0" webm="0">Hash algorithm used (1=SHA1-160, 2=MD5).</UIntegerElement>
+            <BinaryElement name="SignaturePublicKey" id="0x7EA5" multiple="0" webm="0">The public key to use with the algorithm (in the case of a PKI-based signature).</BinaryElement>
+            <BinaryElement name="Signature" id="0x7EB5" multiple="0" webm="0">The signature of the data (until a new.</BinaryElement>
+            <MasterElement name="SignatureElements" id="0x7E5B" multiple="0" webm="0">Contains elements that will be used to compute the signature.
+                <MasterElement name="SignatureElementList" id="0x7E7B" multiple="1" webm="0">A list consists of a number of consecutive elements that represent one case where data is used in signature. Ex: <i>Cluster|Block|BlockAdditional</i> means that the BlockAdditional of all Blocks in all Clusters is used for encryption.
+                    <BinaryElement name="SignedElement" id="0x6532" multiple="1" webm="0">An element ID whose data will be used to compute the signature.</BinaryElement>
+                </MasterElement>
+            </MasterElement>
+        </MasterElement>
+    </MasterElement>
+
+  <!-- Mide format global tags. Support required for all .mide schemas. -->
+  <!-- Since the generating device may be very memory-constrained, and these tags may be repeated periodically for streaming, we use a short (global) element ID and generally allow them at any level -->
+  <UIntegerElement name="SchemaID" global="1" id="0xFE" minver="1">Device EBML schema (aka 'tagset') hint. Points to a numeric schema ID defined at the receiving side.</UIntegerElement>
+  <BinaryElement name="Sync" global="1" id="0xFA" minver="1">Used to provide an arbitrary length sync word (for network / stream framing purposes) at any point in the stream.</BinaryElement>
+  <!--<BinaryElement name="Discontinuity" global="1" id="0xFD" minver="1">Probably replaced by a flag in individual datablocks at the Channel level.</BinaryElement>  -->
+  <IntegerElement name="ElementTag" global="1" id="0xFC" minver="1">Arbitrary tag. Allow for separate opening and closing tags without knowing the length of the enclosed data in advance. I.e. instead of [tag len value=[subtag len... /]/], [tag len=0][subtags and contents][/tag]. Positive value corresponds to the corresponding ElementID as an opening tag; the corresponding negative value as the closing tag. Value -int_max for any int size is reserved.</IntegerElement>
+
+  <!--
+	VR gen3 (Slam Stick / WVR) tags
+	===============================
+
+	Quick n dirty ElementID convention:
+
+	* Global tags and data that will be written frequently and during live recording will use Class A IDs (0x80 ~ 0xFF)
+	* The frequently-written data mainly includes (S)CDBs and any valid children of (S)CDB, such as timecode formats.
+	* Since the number of IDs is small, we'll make no convention about human-readability whatsoever and allocate fixed blocks of address space for specific types of element.
+	* Completely made-up convention: For any 16-element master tag reservation, the child tag reservation will begin at (master tag reservation base + 0x10).
+	    0xFx (0xF0 ~ 0xFF): MIDE-defined global tags, except for SYNC, and reserved value (0xFF). No master tags.
+	    0xAx (0xA0 ~ 0xAF): Datablock formats (ChannelDataBlock, SimpleChannelDataBlock). Child elements are 0xBX...
+	    0xBx (0xB0 ~ 0xBE): Datablock child elements (mainly timestamp formats)
+	    NOTE: 0xEC and 0xBF are defined by the EBML standard, so they don't conform to the above and we can't move them either.
+
+
+	Elements NOT written during live recording should use Class B or larger IDs.
+	These include the RecordingProperties (data describing the channels and any calibration, etc.), configfile elements, etc.
+	Matroska/WebM seem to follow a convention of making these larger IDs correspond to human-readable ASCII codes where possible. The address space is so large, it seems to make more sense than choosing them completely at random.
+	  Class B (0x40 ~ 0x7F 0xXX) encoded first byte includes all of the alphanumerics (A-Z, a-z); so up to 2-byte readable codes are possible.
+	  Class C (0x20 ~ 0x3F 0xXX 0xXX) encoded first byte is comprised entirely of printable characters, including space and the numerals.
+	  Class D (0x10 ~ 0x1F 0xXX 0xXX 0xXX) encoded first byte comprises entirely NON-printable (control) characters. Most hexeditors will print them all as a dot, so the exact choice for the first byte is arbitrary.
+
+	TODO: Carve up each address space to prevent overlaps due to limitations in the python-ebml schema format (each ElementID can have only one name, datatype, etc.)
+	    Class D (4-byte IDs):
+	        [0x1A xx xx xx]  1A 45 DF A3 is used to contain EBML header
+	        [0x18 xx xx xx]  18 53 80 67 is used in Matroska/Mide to define the start of a segment/session. Propose reserving [0x18 xx xx xx] for top-level elements within a file (Session, RecordingProperties, ...)
+	    Class C (3-byte IDs):
+	        None used yet?
+	    Class B (2-byte IDs):
+	        0x42 0xXX ("B") seem to be used in the EBML header itself.
+	        0x43 0xXX ("C") we reserve for configuration-file children.
+	        0x4B 0xXX ("K") we reserve for calibration elements.
+	        0x52-0x53 0xXX ("R", "S") we reserve for represational data (RecordingProperties children).
+	        0x54 0xXX ("T") we reserve for time-related data.
+            0x61 0xXX ("a") we reserve for arbitrary attributes, primarily related to drawing.
+
+   -->
+
+
+  <!-- Elements of the RecordingProperties branch (representational/metadata) of the file -->
+
+    <MasterElement name="RecordingProperties"  id="0x18526570" multiple="0" minver="1">Master element for the RecordingProperties branch of the file, if present.
+        <MasterElement name="RecorderInfo" id="0x5210" multiple="0" minver="1">Master element for the RecorderInfo items (ID, etc.).
+            <!-- NOTE: Several of the RecorderInfo tags are pulled from the Manifest and regurgitated here with a new tag ID to comply with this schema. -->
+            <UIntegerElement name="RecorderTypeUID" id="0x5211" multiple="0" minver="1">Unique Type ID assigned to each recorder variation. May be used to lookup remaining RecordingProperties when streaming.</UIntegerElement>
+            <UIntegerElement name="RecorderSerial" id="0x5212" multiple="0" minver="1">Recorder unique serial number</UIntegerElement>
+            <UIntegerElement name="RecorderSchemaID" id="0x5213" multiple="0" minver="1">ID referencing Schema in use by recorder</UIntegerElement>
+            <StringElement name="ProductName" id="0x5214" multiple="0" minver="1">Product designation of the recording device</StringElement>
+            <StringElement name="UserDeviceName" id="0x5215" multiple="0" minver="1">Text name of this recorder, if any. Probably set by the user.</StringElement>
+            <UIntegerElement name="HwRev" id="0x5216" multiple="0" minver="1">Hardware revision level</UIntegerElement>
+            <UIntegerElement name="FwRev" id="0x5217" multiple="0" minver="1">Firmware revision level</UIntegerElement>
+            <StringElement name="PartNumber" id="0x5218" multiple="0" minver="1">Device part .number. (text product identifier e.g. VR002-100-XYZ).</StringElement>
+            <UIntegerElement name="DateOfManufacture" id="0x5219" multiple="0" minver="1">Device .birthdate. (manufacture date) in UTC seconds since the Epoch.</UIntegerElement>
+            <StringElement name="HwCustomStr" id="0x521A" multiple="0" minver="1">Custom hardware identifier. Hardware is a custom version if present.</StringElement>
+            <StringElement name="FwCustomStr" id="0x521B" multiple="0" minver="1">Custom firmware build. Firmware is a custom build if present. Name should match FW branch/tag name as applicable for identification purposes, but is mainly present so FW updater can generate a warning if a custom build will be replaced by a standard one.</StringElement>
+            <StringElement name="FwRevStr" id="0x521C" multiple="0" minver="1">Firmware revision string.</StringElement>
+            <UIntegerElement name="UniqueChipID" id="0x521D" multiple="0" minver="1">The device CPU's factory-set unique ID.</UIntegerElement>
+            <StringElement name="McuType" id="0x521E" multiple="0" minver="1">Code indicating the type of CPU.</StringElement>
+            <StringElement name="BootloaderRevStr" id="0x521F" multiple="0" minver="1">Bootloader revision string.</StringElement>
+            <UIntegerElement name="BootloaderRev" id="0x5220" multiple="0" minver="1">Incrementing bootloader revision level</UIntegerElement>
+        </MasterElement>
+        <!-- SensorList and PlotList are optional; there are defaults that will be used. The use of defaults is all-or-nothing; the file should define all sensors or have no SensorList at all. -->
+        <MasterElement name="SensorList" id="0x5240" multiple="0" minver="2">Master element for the SensorList items
+            <MasterElement name="Sensor" id="0x5241" multiple="1" minver="2">Master element for a Sensor entry
+                <UIntegerElement name="SensorID" id="0x5242" multiple="0" minver="2">ID of a given Sensor entry; can be used to refer back to this sensor.</UIntegerElement>
+                <StringElement name="SensorName" id="0x5243" multiple="0" minver="2">Text name assigned to a sensor; probably the sensor make/model if present.</StringElement>
+                <UIntegerElement name="SensorBwLimitIDRef" id="0x5244" multiple="0" minver="2">Reference to a BwLimitList entry. If present, this discloses the usable bandwidth range of the sensor itself.</UIntegerElement>
+                <MasterElement name="TraceabilityData" id="0x5250" multiple="0" minver="2">Master element for any traceability data tied to the Sensor.
+                    <StringElement name="SensorSerialNumber" id="0x5251" multiple="0" minver="2">Sensor manufacturer-supplied serial number, if any.</StringElement>
+                    <!-- Child elements TBD... -->
+                </MasterElement>
+            </MasterElement>
+        </MasterElement>
+
+        <MasterElement name="ChannelList" id="0x5270" multiple="0" minver="2">Master element for a Channel entry
+            <MasterElement name="Channel" id="0x5271" multiple="1" minver="2">Master element for a Channel entry
+                <UIntegerElement name="ChannelID" id="0x5272" multiple="0" minver="2">ID of a given Channel entry; can be used to refer to this entry. Referenced by ChannelDataBlock/SimpleChannelDataBlock/etc.</UIntegerElement>
+                <StringElement name="ChannelName" id="0x5273" multiple="0" minver="2">Descriptive overall text name for this channel (e.g. "ADC").</StringElement>
+                <UIntegerElement name="ChannelCalibrationIDRef" id="0x5274" multiple="0" minver="2">Reference to a Calibration in CalibrationList.</UIntegerElement>
+                <StringElement name="ChannelFormat" id="0x5275" multiple="0" minver="2">Declaration of the format and representation of the (sub)channels' data. Modeled after Python Struct format strings, may be expanded at a later date. Currently limited to the expanded format-string format, i.e. [>HHHHH] rather than [>5H]. Whitespace and undefined formatting characters are ignored.</StringElement>
+                <StringElement name="ChannelParser" id="0x5276" multiple="0" minver="2">Name of the hardcoded parsing object, if known. Overrides ChannelFormat.</StringElement>
+
+                <StringElement name="TimeCodeScale" id="0x5277" multiple="0" minver="2">Channel seconds/tick. String represents a valid numeric expression, such as integer, decimal or ratio, e.g. '16262/32768'. Applies to all subsequent Abs timecodes. If not set, use channel default.</StringElement>
+                <UIntegerElement name="TimeCodeModulus" id="0x5278" multiple="0" minver="2">The modulus at which modulo timestamps for this channel roll over.</UIntegerElement>
+                <StringElement name="SampleRate" id="0x5279" multiple="0" minver="2">The samplerate for this channel, if known and fixed. String represents a valid numeric expression, such as integer, decimal or ratio, e.g. '32768/16262'. Element required if both starting and ending timecodes will ever be omitted for blocks in this channel.</StringElement>
+                <MasterElement name="SubChannel" id="0x52A0" multiple="1" minver="2">Master element for SensorSubChannels.
+                    <IntegerElement name="SubChannelID" id="0x52A1" multiple="0" minver="2">ID of this SubChannel. Currently, SubChannelIDs must be sequential, starting from 0, for use with Slam Stick Lab.</IntegerElement>
+                    <StringElement name="SubChannelName" id="0x52A2" multiple="0" minver="2">Display name of the subchannel, typically the axis name for multiaxis measurements (e.g. "X", "Yaw", etc.). Typically omitted if no display name is needed beyond a measurement label and units.</StringElement>
+                    <UIntegerElement name="SubChannelCalibrationIDRef" id="0x52A3" multiple="0" minver="2">Reference to a Calibration in CalibrationList.</UIntegerElement>
+                    <UIntegerElement name="SubChannelBwLimitIDRef" id="0x52A4" multiple="0" minver="2">Reference to a BwLimitList entry. If present, this discloses any bandwidth limitations imposed for the acquisition channel, e.g. antialias or other filter settings. Note that the effective bandwidth is the lesser of the Sensor and SubChannel bandwidth!</UIntegerElement>
+                    <StringElement name="SubChannelLabel" id="0x52A5" multiple="0" minver="2">General measurement type label for this subchannel (e.g. "Acceleration", "Rotation", "Temperature", etc.).</StringElement>
+                    <UnicodeElement name="SubChannelUnits" id="0x52A6" multiple="0" minver="2">Text name of the engineering unit (e.g. "g") for this subchannel. Unicode characters such as degree or Greek symbols are allowed and encouraged.</UnicodeElement>
+                    <UIntegerElement name="SubChannelRangeMin" id="0x52A7" multiple="0" minver="2">Minimum valid sensor value; may be used for data validation or initial axis scaling during display.</UIntegerElement>
+                    <UIntegerElement name="SubChannelRangeMax" id="0x52A8" multiple="0" minver="2">Maximum valid sensor value; may be used for data validation or initial axis scaling during display.</UIntegerElement>
+                    <UIntegerElement name="SubChannelSensorRef" id="0x52A9" multiple="0" minver="2">Reference to a Sensor ID. Allows the association between SubChannels and a physical sensor to be expressed.</UIntegerElement>
+                    <UIntegerElement name="SubChannelWarningRef" id="0x52AA" multiple="1" minver="2">Reference to a warning range, i.e. another sensor measuring something that affects the results of this one.</UIntegerElement>
+                    <IntegerElement name="SubChannelVisibility" id="0x52AB" multiple="0" minver="2">Allow data channels to specify a visibility level; could have different visibility levels for e.g. 'advanced', 'on request' (channels which are not normally useful on their own, e.g. IRIG stream), 'hidden' (internal diagnostic or other dirty laundry).</IntegerElement>
+                    <BinaryElement name="SubChannelPlotColor" id="0x52AC" multiple="0" minver="2">The RGB values of the default plotting color (3 bytes).</BinaryElement>
+                    <StringElement name="SubChannelUnitsName" id="0x5304" multiple="0" minver="2">Text name of the sensor output units.</StringElement>
+                    <UIntegerElement name="SubChannelUnitsXRef" id="0x5305" multiple="0" minver="2">Reference to a numbered, standardized SI unit.</UIntegerElement>
+                </MasterElement>
+            </MasterElement>
+            <MasterElement name="PlotList" id="0x5300" multiple="0" minver="2">Master element for the PlotList items. It works like a virtual Channel, with Plots being its Subchannels.
+                <MasterElement name="Plot" id="0x5301" multiple="1" minver="2">Master element for a Plot entry
+                    <!-- NOTE: ElementIDs/names are intentionally replicated between SubChannel and Plot children. -->
+                    <IntegerElement name="SubChannelID" id="0x52A1" multiple="0" minver="2">SubChannelID</IntegerElement>
+                    <StringElement name="SubChannelName" id="0x52A2" multiple="0" minver="2">Text name of the subchannel (e.g. axis?).</StringElement>
+                    <UIntegerElement name="SubChannelCalibrationIDRef" id="0x52A3" multiple="0" minver="2">Reference to a Calibration in CalibrationList.</UIntegerElement>
+                    <UIntegerElement name="SubChannelRangeMin" id="0x52A7" multiple="0" minver="2">Minimum valid sensor value.</UIntegerElement>
+                    <UIntegerElement name="SubChannelRangeMax" id="0x52A8" multiple="0" minver="2">Maximum valid sensor value.</UIntegerElement>
+                    <UIntegerElement name="SubChannelWarningRef" id="0x52AA" multiple="1" minver="2">Reference to a warning range, i.e. another sensor measuring something that affects the results of this one</UIntegerElement>
+                    <IntegerElement name="SubChannelVisibility" id="0x52AB" multiple="0" minver="2">Allow data channels to specify a visibility level; could have different visibility levels for e.g. 'advanced', 'on request' (channels which are not normally useful on their own, e.g. IRIG stream), 'hidden' (internal diagnostic or other dirty laundry).</IntegerElement>
+                    <BinaryElement name="SubChannelPlotColor" id="0x52AC" multiple="0" minver="2">The RGB values of the default plotting color (3 bytes).</BinaryElement>
+                    <StringElement name="SubChannelUnitsName" id="0x5304" multiple="0" minver="2">Text name of the sensor output units.</StringElement>
+                    <UIntegerElement name="SubChannelUnitsXRef" id="0x5305" multiple="0" minver="2">Reference to a numbered, standardized SI unit.</UIntegerElement>
+                    <!--SubChannelBwLimitIDRef applicable here? -->
+                    <!-- Elements unique to Plot -->
+                    <StringElement name="SubChannelAxisName" id="0x5302" multiple="0" minver="2">Text name of the axis(?).</StringElement>
+                    <UIntegerElement name="SubChannelAxisXRef" id="0x5303" multiple="0" minver="2">Reference to an Axis.</UIntegerElement>
+                    <StringElement name="SubChannelUnitsName" id="0x5304" multiple="0" minver="2">Text name of the sensor output units.</StringElement>
+                    <UIntegerElement name="SubChannelUnitsXRef" id="0x5305" multiple="0" minver="2">Reference to a numbered, standardized SI unit.</UIntegerElement>
+
+                    <MasterElement name="PlotSource" id="0x5320" multiple="1" minver="2">List of channels/subchannels used by this Plot
+                        <IntegerElement name="PlotChannelRef" id="0x5221" multiple="0" minver="2">SubChannelID</IntegerElement>
+                        <IntegerElement name="PlotSubChannelRef" id="0x5222" multiple="0" minver="2">SubChannelID</IntegerElement>
+                    </MasterElement>
+                </MasterElement>
+            </MasterElement>
+        </MasterElement>
+
+        <MasterElement name="WarningList" id="0x5360" multiple="0" minver="2"> "Idiot Light" warnings for sensors that are inaccurate in certain conditions
+            <MasterElement name="Warning" id="0x5361" multiple="1" minver="2">
+                <IntegerElement name="WarningID" id="0x5362" multiple="0" minver="2">Warning ID, referenced by Subchannels. </IntegerElement>
+                <IntegerElement name="WarningChannelRef" id="0x5363" multiple="0" minver="2">ChannelID</IntegerElement>
+                <IntegerElement name="WarningSubChannelRef" id="0x5364" multiple="0" minver="2">SubChannelID</IntegerElement>
+                <FloatElement name="WarningRangeMin" id="0x5365" multiple="0" minver="2">Minimum valid value. Note: this is in real, post-converted units, not raw channel units. </FloatElement>
+                <FloatElement name="WarningRangeMax" id="0x5366" multiple="0" minver="2">Maximum valid value. Note: this is in real, post-converted units, not raw channel units. </FloatElement>
+            </MasterElement>
+        </MasterElement>
+
+        <MasterElement name="BwLimitList" id="0x5380" multiple="0" minver="2"> List of bandwidth constraints on sensors and data channels. These will (on a Sensor) provide the intrinsic sensor limits if known, or (on a data channel) provide information about any user-configured limits, e.g. AA filter cutoffs. This data is mandatory for sensor fusion, otherwise optional.
+            <MasterElement name="BwLimit" id="0x5381" multiple="1" minver="2">
+                <IntegerElement name="BwLimitID" id="0x5382" multiple="0" minver="2">Limit entry ID, referenced by Sensors or (Sub)channels. </IntegerElement>
+                <StringElement name="LowerCutoff" id="0x5383" multiple="0" minver="2">Lower cutoff frequency.</StringElement>
+                <StringElement name="LowerRolloff" id="0x5384" multiple="0" minver="2">Lower rolloff, in dB/decade.</StringElement>
+                <StringElement name="UpperCutoff" id="0x5385" multiple="0" minver="2">Upper cutoff frequency.</StringElement>
+                <StringElement name="UpperRolloff" id="0x5386" multiple="0" minver="2">Upper rolloff, in dB/decade.</StringElement>
+                <StringElement name="GroupDelay" id="0x5387" multiple="0" minver="2">Group delay, in channel ticks (channels/subchannels only).</StringElement>
+            </MasterElement>
+        </MasterElement>
+    </MasterElement>
+    <!--
+    Attributes: a way to insert an arbitrary key/value into a structure, without revising (and potentially bloating) the schema itself. This data is typically non-critical.
+    Strictly speaking, this may be considered an abuse of EBML, but it is flexible and moderately clean.
+    -->
+    <MasterElement name="Attribute" global="1" id="0x6110" multiple="1" minver="2"> Container For arbitrary name/value attributes, allowing additional data without revising (and bloating) the schema. All of these elements are level -1, allowing an AttributeList to occur at any level, but should always be used at the relative levels implied below.
+        <UnicodeElement name="AttributeName" id="0x612f" multiple="0" minver="2"> Attribute name. Should always be child of Atrribute. </UnicodeElement>
+        <IntegerElement name="IntAttribute" id="0x6120" multiple="0" minver="2"> Integer Attribute. Should always be child of Atrribute. </IntegerElement>
+        <UIntegerElement name="UIntAttribute" id="0x6121" multiple="0" minver="2"> Unsigned integer Attribute. Should always be child of Atrribute. </UIntegerElement>
+        <FloatElement name="FloatAttribute" id="0x6122" multiple="0" minver="2"> Floating point Attribute. Should always be child of Atrribute. </FloatElement>
+        <StringElement name="StringAttribute" id="0x6123" multiple="0" minver="2"> ASCII String Attribute. Should always be child of Atrribute. </StringElement>
+        <DateElement name="DateAttribute" id="0x6124" multiple="0" minver="2"> Date Attribute. Should always be child of Atrribute. </DateElement>
+        <BinaryElement name="BinaryAttribute" id="0x6125" multiple="0" minver="2"> Binary Attribute. Should always be child of Atrribute. </BinaryElement>
+        <UnicodeElement name="UnicodeAttribute" id="0x6126" multiple="0" minver="2"> ASCII String Attribute. Should always be child of Atrribute. </UnicodeElement>
+    </MasterElement>
+
+
+	<!--
+	Calibration entries. Any dynamically-generated data pertaining to plotting or syncing channels will eventually be written here. These are stored top-level to minimize the memory footprint of any device-side reprocessing of these entries.
+
+	Each calibration entry in the CalibrationList will be either a UnivariatePolynomial OR a BivariatePolynomial. The level-2 entries below are actually shared between these master types.
+	In the case of a BivariatePolynomial, the BivariateChannelIDRef and BivariateSubChannelIDRef are mandatory.
+
+	The calibration entry types and their coefficient blocks specify an n-degree univariate or bivariate polynomial, respectively.
+
+	Univariate: Evaluated in the form y = sum( A(x-xref)^n ) for all n, where y is the output sample, A is the coefficient, x is the input sample, xref is the reference value, n is the degree of each term and the terms are expressed from highest to lowest degree.
+	Examples:
+	   2 coef block [A B]: y = A(x-xref) + B
+	   4 coef block [A B C D]: y = A(x-xref)^3 + B(x-xref)^2 + C(x-xref) + D
+
+	Bivariate: Evaluated in the form y = sum( A(x-xref)^m(y-yref)^n ) for all m and n, where:
+	y is the output sample,
+	A is the coefficient,
+	x,y are the input samples for this and the 2nd channel,
+	xref,yref are the reference values for this and the 2nd channel,
+	m,n are the degrees of the x and y terms.
+	Ordering here is a little trickier: for any degree, a term must exist for every permutation the degrees 0~n for x and y, e.g. x^2y^2, x^2y, xy^2, xy, ...
+	Terms are expressed  from highest to lowest total degree (m*n), with terms of equal degree sorted by degree of the 1st channel term (for example, x^2y^1 would come before x^1y^2), assuming the 1st channel term is always expressed first.
+	Due to the permutation, legal coefficient block lengths are those which satisfy the number of permuted terms, or generally, nCoefs=(degree+1)^2 . (FIXME: CHECKME: Valid up to 2nd order; have not checked further...)
+
+	Examples:
+	   degree 0: 1 coef block [A] (trivial case for completeness): y = A(x-xref)^0(y-yref)^0 = A
+	   degree 1: 4 coef block [A B C D]: A(x-xref)(y-yref) + B(x-xref) + C(y-yref) + D
+	-->
+
+	<!-- Rules: This should appear after the Recording properties element (more specifically, after SensorList and PlotList), if one exists and the Bivariate polynomials reference non-default (sub)channels. -->
+
+    <MasterElement name="CalibrationList"  id="0x4B00" multiple="0" minver="1">Master element for the CalibrationList items
+        <MasterElement name="UnivariatePolynomial" id="0x4B01" multiple="1" minver="1">Master element for a univariate (1-variable) calibration entry
+            <UIntegerElement name="CalID" id="0x4B03" mandatory="1" multiple="0" minver="1">ID of this entry, referenced by SensorList.</UIntegerElement>
+            <FloatElement name="CalReferenceValue" id="0x4B04" multiple="0" minver="1">Reference value for this channel</FloatElement>
+            <FloatElement name="PolynomialCoef" id="0x4B08" multiple="1" minver="1">Univariate or bivariate polynomial coefficient in canonical order</FloatElement>
+        </MasterElement>
+        <MasterElement name="BivariatePolynomial" id="0x4B02" multiple="1" minver="1">Master element for a bivariate (2-variable) calibration entry
+            <UIntegerElement name="CalID" id="0x4B03" mandatory="1" multiple="0" minver="1">ID of this entry, referenced by SensorList.</UIntegerElement>
+            <FloatElement name="CalReferenceValue" id="0x4B04" multiple="0" minver="1">Reference value for this channel</FloatElement>
+            <FloatElement name="BivariateCalReferenceValue" id="0x4B05" multiple="0" minver="1">Reference value for the 2nd channel when using bivariate calibration</FloatElement>
+            <UIntegerElement name="BivariateChannelIDRef" id="0x4B06" multiple="0" minver="1">Channel ID of the channel to be used as the 2nd parameter for bivariate compensation</UIntegerElement>
+            <UIntegerElement name="BivariateSubChannelIDRef" id="0x4B07" multiple="0" minver="1">SubChannel ID of the subchannel to be used as the 2nd parameter for bivariate compensation</UIntegerElement>
+            <FloatElement name="PolynomialCoef" id="0x4B08" multiple="1" minver="1">Univariate or bivariate polynomial coefficient in canonical order</FloatElement>
+        </MasterElement>
+		<UIntegerElement name="CalibrationDate" id="0x4B20" multiple="0" minver="1">Date of factory calibration, in UTC seconds</UIntegerElement>
+		<UIntegerElement name="CalibrationExpiry" id="0x4B22" multiple="0" minver="1">Date of factory calibration expiration, in UTC seconds</UIntegerElement>
+		<UIntegerElement name="CalibrationSerialNumber" id="0x4B21" multiple="0" minver="1">Mide-assigned serial # for a specific (re)calibration procedure. Can be used to lookup calibration conditions and exact facility / test stand used, etc.</UIntegerElement>
+    </MasterElement>
+
+  <!-- Elements of a configuration file -->
+    <!-- This is stuck into the main schema for convenience, but really it has no relation. If the configfile were to be attached to a recording as metadata, it would be as a binary blob - the 'Level's need not be consistent with the recording file. -->
+	<MasterElement name="RecorderConfiguration"  id="0x18436667" multiple="0" minver="1">Master element for the RecorderConfiguration block, if present. This allows a mechanism to attach the actual recorder configuration to the file as metadata, and (hacky) use the same schema document to parse output files and write configuration files. It is expected that by necessity, children of RecorderConfiguration will be recorder-specific.
+	    <MasterElement name="SSXBasicRecorderConfiguration" id="0x4300" multiple="0" minver="1">Master element for the SSX-specific RecorderConfiguration block. This and its subelements are specific to the basic Slam Stick X.
+			<UIntegerElement name="SampleFreq" id="0x4310" multiple="0" minver="1">Sampling frequency for the high speed channel(s) in Hz.</UIntegerElement>
+			<UIntegerElement name="AAFilterCornerFreq" id="0x4311" multiple="0" minver="1">Antialias filter corner frequency for the high speed channel(s) in Hz. Omit to let the device choose based on the sampling rate. Enter 0 to disable (bypass) AA filter. (Beware: diagnostic usage only; calibration will be invalid in this state.)</UIntegerElement>
+			<UIntegerElement name="OSR" id="0x4312" multiple="0" minver="1">Oversampling ratio. Allowed values are 1 or power-of-2 integer in the range from 16 to 4096. Omit to let the device choose based on the sampling rate.</UIntegerElement>
+			<IntegerElement name="UTCOffset" id="0x4313" multiple="0" minver="1">UTC offset in seconds. May be used for entering local timezone offset. Sign follows the normal convention for specifying timezone offsets, e.g. "UTC-5" (-5*3600) to display the local time as 5 hours earlier than UTC. This value is only used to convert the internal UTC time to local time to generate the FAT16/32 file timestamp, which is expected to be in local time (sans any DST offset, which is added by the host system). If the device clock is directly set in local time for any reason, this field should be 0.</IntegerElement>
+			<UIntegerElement name="PlugPolicy" id="0x4314" multiple="0" minver="2">Defines device behavior in response to an unexpected plug-in (or other power/data connection) during recording. Current options are 0 (exit immediately), 1 (exit after current recording finishes - HW default), or 2 (ignore - require button presses to terminate recording mode).</UIntegerElement>
+        </MasterElement>
+        <MasterElement name="SSXTriggerConfiguration" id="0x4340" multiple="0" minver="1">Master element for SSX trigger configuration.
+			<UIntegerElement name="WakeTimeUTC" id="0x4350" multiple="0" minver="1">Absolute, calendar time in UTC at which to arm/start the recorder. WakeTimeUTC and PreRecordDelay are mutually exclusive.</UIntegerElement>
+			<UIntegerElement name="PreRecordDelay" id="0x4351" multiple="0" minver="1">Delay in seconds before the start of recording (or trigger arming). WakeTimeUTC and PreRecordDelay are mutually exclusive.</UIntegerElement>
+			<UIntegerElement name="AutoRearm" id="0x4352" multiple="0" minver="1">Automatically rearm at end of triggered recording (do not require button press)</UIntegerElement>
+			<UIntegerElement name="RecordingTime" id="0x4353" multiple="0" minver="1">Time in seconds to record for when triggered. Omit to impose no limit.</UIntegerElement>
+			<!-- Some IDs reserved for specifying activity behavior, e.g. restart the RecordingTime as long as something interesting is happening -->
+			<MasterElement name="Trigger" id="0x4360" multiple="1" minver="1">Master element for a generic trigger.
+				<IntegerElement name="TriggerChannel" id="0x4361" multiple="0" minver="1">The sensor channel used as the trigger. Mandatory for all Triggers.</IntegerElement>
+				<IntegerElement name="TriggerSubChannel" id="0x4362" multiple="0" minver="1">The sensor subchannel used by the trigger.</IntegerElement>
+				<IntegerElement name="TriggerWindowLo" id="0x4363" multiple="0" minver="1">Lower value of trigger window in native units.</IntegerElement>
+				<IntegerElement name="TriggerWindowHi" id="0x4364" multiple="0" minver="1">Upper value of trigger window in native units.</IntegerElement>
+            </MasterElement>
+        </MasterElement>
+	    <MasterElement name="SSXChannelConfiguration" id="0x43A0" multiple="1" minver="2">Master element for channel-specific configuration elements.
+			<UIntegerElement name="ConfigChannel" id="0x43A1" mandatory="1" multiple="0" minver="2">Channel to apply these configuration elements to.</UIntegerElement>
+			<UIntegerElement name="ChannelSampleFreq" id="0x43A2" multiple="0" minver="2">Sampling frequency for this channel in Hz, if supported by device. Unsupported rates will be coerced to nearest supported rate.</UIntegerElement>
+			<UIntegerElement name="SubChannelEnableMap" id="0x43A3" multiple="0" minver="2">Bitmap indicating enabled/disabled SubChannels, if supported by device. If only Channel-level enable/disable supported by this channel, any nonzero value will enable the entire Channel.</UIntegerElement>
+        </MasterElement>
+        <MasterElement name="RecorderUserData" id="0x43F0" multiple="0" minver="1">The user-defined properties of the recorder, not used by the recorder itself.
+            <UnicodeElement name="RecorderName" id="0x43F1" multiple="0" minver="1">The user-defined name of the recorder</UnicodeElement>
+            <UnicodeElement name="RecorderDesc" id="0x43F2" multiple="0" minver="1">The user-defined description of/notes on the recorder</UnicodeElement>
+        </MasterElement>
+    </MasterElement>
+
+    <MasterElement name="RecorderConfigurationList" id="0x18436668" global="1" multiple="0" mandatory="0">
+        New configuration data: pairs of config IDs and values. Duplicated from
+        the config_ui.xml schema, rather than attempting to parse one element
+        with a different schema.
+        <MasterElement name="RecorderConfigurationItem" id="0x5008" multiple="1">
+            <UIntegerElement name="ConfigID" id="0x5001" multiple="0"></UIntegerElement>
+            <UIntegerElement name="BooleanValue" id="0x5100" multiple="0"></UIntegerElement>
+            <IntegerElement name="IntValue" id="0x5102" multiple="0"></IntegerElement>
+            <UIntegerElement name="UIntValue" id="0x5101" multiple="0"></UIntegerElement>
+            <FloatElement name="FloatValue" id="0x5103" multiple="0"></FloatElement>
+            <StringElement name="ASCIIValue" id="0x5104" multiple="0"></StringElement>
+            <UnicodeElement name="TextValue" id="0x5105" multiple="0"></UnicodeElement>
+        </MasterElement>
+    </MasterElement>
+
+    <!-- Exported configuration data. Also not part of an IDE, but here for convenience. -->
+    <MasterElement name="ExportedConfigurationData" id="0x18436669" multiple="0" mandatory="0">
+        Exported configuration data. Also contains device information and
+        CONFIG.UI for compatibility.
+        <MasterElement name="RecorderConfigurationList" />
+        <MasterElement name="RecordingProperties" />
+        <BinaryElement name="ConfigUI" id="0x7777" mandatory="0" multiple="0">
+            Actually from the CONFIG.UI schema. Read as binary in this schema,
+            then parsed with the other one.
+        </BinaryElement>
+        <MasterElement name="Attribute" />
+    </MasterElement>
+
+  <!-- Elements of the actual recording(s) (Session branch(es) of the file) -->
+
+  <MasterElement name="Session"  id="0x18538067" multiple="1" minver="1">This element contains all other top-level (level 1) elements. A session basically comprises one 'recording' and may contain any number of individual channels. A typical file should consist of one segment (mostly because we won't really know its length in advance).</MasterElement>
+
+  <!--
+    Children of Session. However, since we may implement Session tags as being completely optional / nonexistent / polite suggestion on the reader side, take 'Level' with a grain of salt...
+
+	 Some notes on timecode stuff
+
+		 Timecoding is vitally important to most data acquisition, so it's OK if these proliferate a bit...
+		 TimecodeScales should be set *per channel*, and may use the default value ONLY if none declared for the channel!
+		 For WVR / Slam Stick we'll use TimeBaseUTC, TimeCodeAbs, TimeCodeAbsMod. Any other timecode formats effectively don't exist until we need them...
+		 TimeBase: A base time (Unix time stamp in seconds) applied in the Session. All future session timecodes are an offset from the last known TimeBase. Most likely a file will contain only a single TimeBase element at the start of the session.
+		 TimeCode: Offset from the TimeBase; its scale is defined by a TimeCodeScale element on a per-channel basis (with 32768 ticks/sec as a default). The possible permutations are...
+		     Start/End: The TimeCode may correspond to the first sample in the block (start) or the last sample in the block (end).
+		     Abs/AbsMod/(Relative): The TimeCode may be absolute, modulo, or relative (not implemented). Absolute shall increase monotonically for the duration of the session and must be sized large enough to express any reasonably expected session length. Modulo timecodes are allowed to roll over at the UINT_MAX for a given number of octets.
+		 In a typical application, the Session would start with a single TimeBase (probably overflows of a device's internal high-res clock, in seconds), immediately followed by a Session-level TimeCodeAbs(Mod) with the sub-second count from the same oscillator, captured at the same time as the seconds (to avoid any possible unhandled rollovers between the TimeBase and the first sample from individual channels), or a dummy zero-length *ChannelDataBlock for each channel if Session-level TimeCodes not allowed.
+
+	 Rules for generated files / streams
+
+		 General
+			 The file/stream MAY contain tags not recognized by the viewer (e.g. for internal debugging or defined after a given viewer / schema version was released). The viewer is expected to skip the unrecognized data without crashing. The viewer MAY inform the user that unrecognized data is present, but isn't required to.
+			 Files may contain any global tag defined by the EBML standard, including VOID tags, at any document level.
+			 Length-encoded EBML data may encode length data using any number of bytes equal or greater than the minimum required to encode the value. For example, a length of 1 may be encoded as 0x81 or 0x4001 or 0x200001, etc. ("Gassy" encodings may be used by the device to enforce memory alignment or consume slack bytes in a fixed buffer allocation, etc.)
+			 If the Schema or RecorderProperties are unavailable for any reason, the reader MAY substitute its best guess for this data, such as a default copy based on some signal (device ID, etc.). No guaranteees can be made about the ability of a given reader to parse a given file if these data are not present in the file. In the case of a Stream, the reader is free to ignore/discard all data received before both a SYNC tag and a reference to a valid Schema/RecordingProperties are received. (Really, there are no guarantees about anyone receiving or parsing the streamed data, period.)
+			 For the time being, devices SHALL NOT write files consisting of multiple sessions, and must assume any representation of sessions in the file may be ignored. For the time being (forseeable future), the reader MAY define child elements of Session (datablocks, etc.) to actually be siblings.
+
+	 Rules for channels
+
+		 General
+			 Although expressed as a signed type, channels written by the device must be positive. Negative channel numbers are reserved (may be used by the reader for e.g. virtual channels consisting of processed data).
+			 Channel numbering is arbitrary and is not necessarily consecutive.
+			 The device MAY list channels in its RecorderProperties that have no datablocks associated with them. (The channel information may be hardcoded and channels may appear for sensors that are disabled in the current configuration or aren't populated on the device.)
+			 The device SHOULD NOT generate datablocks for channels that do not have a corresponding entry in RecorderProperties. The behavior of the reader upon encountering such channels is undefined. (A nice response would be to silently ignore them, but it could just crash, and it's your own damn fault, dear firmware writer.)
+
+	 Rules for datablocks
+
+		 General
+			 The device MAY (and often will) use different block types for different channels. Most commonly, full CDBs for data taken at high rates and/or precise timing requirements, and a 'Simple' blocktype (e.g. SCDB) for low-rate channels consisting of only a few or single samples. The device MAY mix block types in a single channel. (It probably won't, but is not expressly forbidden from doing so.)
+			 As a point of clarification, if the device mixes blocktypes in a channel, the types MAY use different timecode formats, and modulo timecodes may have different moduli. The usual rules below still apply - the device may not 'lose' rollovers.
+
+		 Datablock timecoding rules:
+			 General
+				 The timecode scale, representation and modulus is allowed to differ between channnels, so accounting for rollovers in modulo timestamps should be handled per-channel.
+				 Where modulo timestamps are used, the device MUST NOT allow more than one rollover period to elapse between blocks in a given channel. In the case of long gaps between datablocks in a channel, the device MUST either write a datablock using a timecode format large enough to correctly represent the time elapsed, OR write one or more dummy (zero-sample) datablocks such that all rollovers are "caught up" before the next datablock sample.
+				 If a Start and End timecode are provided, the Start timecode is the time of the first sample in the block; the End timecode is the time of the last sample in the block. For formats that provide only a single timecode, it corresponds to the first sample in the block.
+
+			 Modulo timecodes and mixing of timecodes
+				 The modulus is defined as the exact value *at* which a given value is equal to zero. In other words, it is one more than the maximum possible remainder value. For example, a 16-bit timecode with a maximum legal value of 0xFFFF has a modulus of 0x10000.
+				 A modulo timecode has rolled over if the current value is LESS THAN the previous value. Given two consecutive datablocks with identical modulo timecode 'n', no time has elapsed between them. Given two blocks with timecodes n and n-1, respectively, the maximum allowable time for the timecode's modulus has elapsed.
+
+			 Timecode ordering
+				 Timecodes in the datablocks written for a given channel MUST be monotonically increasing. That is, the device MUST NOT write a datablock for a given channel with an earlier timecode than an already written datablock for that channel. It can be safely assumed that a decrease in any modulo timecode represents a rollover, and any decrease in a non-modulo absolute timecode is an error condition. (This is a litter stricter than Matroska, which allows out-of-order timecodes as long as elements referencing another element's timecode come after said referenced element. The monotonicity requirement is to allow random-access seeking time ranges within the files.)
+				 However, datablocks are NOT required to be monotonically increasing ACROSS channels.
+				 In other words, given an output such as: <datablock1 ch=1> <datablock2 ch=2> <datablock3 ch=1>, datablock2 may have an earlier timecode than datablock1 (because they are different channels), but datablock3 may not (same channel).
+	-->
+
+    <UIntegerElement name="TimeBaseUTC"  id="0x5462" multiple="1" minver="1">Session time base value in Unix Time. If present, used as the base for all future timecodes in the session.</UIntegerElement>
+
+    <BinaryElement name="SimpleChannelDataBlock"  id="0xA0" multiple="1" minver="1">This element contains potentially-channelized instrumentation data in a minimalist format. Its mandatory, fixed-length header includes a 2-byte modulo timecode (scaled to the channel's TimecodeScale, default of 1/32768 sec) and a 1-byte integer ChannelID.</BinaryElement>
+
+    <MasterElement name="ChannelDataBlock"  id="0xA1" multiple="1" minver="1">This element contains child elements including instrumentation data associated to a channel. This is used for e.g. binding a timestamp(s) and/or metadata to a specific multi-sample block of sensor data, which may be written asynchronously with respect to other channels' data (i.e. multiplexed).
+        <IntegerElement name="ChannelIDRef" id="0xB0" multiple="0" minver="1">Child of ChannelDataBlock: the channel this data is associated with</IntegerElement>
+        <UIntegerElement name="ChannelFlags" id="0xB1" multiple="0" minver="1">Child of ChannelDataBlock: optional flags to indicate datablock features such as discontinuity</UIntegerElement>
+        <BinaryElement name="ChannelDataPayload" id="0xB2" multiple="0" minver="1">Child of ChannelDataBlock: the actual channel data samples. If there are multiple subchannels, for each sample point, the sample for each subchannel will be written consecutively (i.e. [sc0 sc1 sc2] [sc0 sc1 sc2]).</BinaryElement>
+        <UIntegerElement name="StartTimeCodeAbs" id="0xB8" multiple="0" minver="1">Absolute timecode as an offset from the session TimeBase. The timecode resolution is given by the channel's TimeCodeScale.</UIntegerElement>
+        <UIntegerElement name="EndTimeCodeAbs" id="0xB9" multiple="0" minver="1">Absolute timecode as an offset  from the session TimeBase. The timecode resolution is given by the channel's TimeCodeScale.</UIntegerElement>
+        <UIntegerElement name="StartTimeCodeAbsMod" id="0xBA" multiple="0" minver="1">Absolute start timecode as an offset from session TimeBase, mod TimeCodeModulus. Allows for a short, rolling-over (but still absolute) code. The timecode resolution is given by the channel's TimeCodeScale.</UIntegerElement>
+        <UIntegerElement name="EndTimeCodeAbsMod" id="0xBB" multiple="0" minver="1">Absolute end timecode as an offset from session TimeBase, mod TimeCodeModulus. Allows for a short, rolling-over (but still absolute) code. The timecode resolution is given by the channel's TimeCodeScale.</UIntegerElement>
+        <BinaryElement name="ChannelDataMinMeanMax" id="0xBC" multiple="0" minver="1" precache="1">Statistical data for this block's payload consisting of 3 datapoints (min, mean, max) per subchannel. They are organized as [[sc0min] [sc1min] [sc2min] ...] [[sc0mean] [sc1mean] [sc2mean] ...] [[sc0max] [sc1max] [sc2max] ...]. The format and representation of the stat data exactly matches that of the input samples; that is, if the input samples are uint16_t, each stat entry is also a uint16_t.</BinaryElement>
+        <UIntegerElement name="MediaWriteLatency" id="0xBE" multiple="0" minver="2" precache="0">Super-optional diagnostic element indicating the latency between data acquisition and transfer to the output media. The exact meaning of this value is device-dependent, but may serve as a general indicator of excess activity load, retransmission or congestion (for transmission media) or media wear (for recording media).</UIntegerElement>
+    </MasterElement>
+</Schema>
