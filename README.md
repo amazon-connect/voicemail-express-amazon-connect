@@ -63,5 +63,13 @@ The following items are currently planned for future releases. Changes to roadma
    -  Reduce complexity and number of functions
    -  Support for GitHub sync
 
-## Current Published Version 2024.08.01
-Current published version is the version of the code and templates that has been deployed to our S3 buckets
+## Current Published Version
+### 2024.08.01
+This is the published version of the code and templates that has been deployed to our S3 buckets and will be used during a normal deployment.
+
+## Acknowledgements
+While the code and documentation has been predominantly pushed by [Jason Douglas](https://github.com/dougjaso), this is largely due to internal team processes. This version of Voicemail Express 3 has been built and tested by a number of people including:
+
+-  [Jason Douglas](https://github.com/dougjaso): Base solution design, roadmap, feature maangement, brute force Python developer, nitpicker.
+-  [Steve Earl](https://github.com/SteveEarl-AWS): (Converted) Python code developer, (Formerly) NodeJS code developer, KVS processing magician, remodler of cabins.
+-  [Rob Pittfield](https://github.com/robpittfield2): Load testing mastermind, community relations, herder of cats.
