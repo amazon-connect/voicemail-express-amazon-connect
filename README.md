@@ -16,12 +16,12 @@ Voicemail Express is designed to provide basic voicemail functionality to Amazon
 With Voicemail Express, customers can have the option to leave a voicemail for an individual agent or an Amazon Connect Queue. Once the voicemail is recorded, a series of processes take place in the following order:
 1. Voicemail recording is extracted and stored in S3 as a .wav file
 1. The recording is transcribed using Amazon Transcribe
-1. A presigned URL is geenrated that provides access to the voicemail recording without the need for further authentication
+1. A presigned URL is generated that provides access to the voicemail recording without the need for further authentication
 1. The voicemail is packaged for delivery, including the transcription, presigned URL, and contact data. It is then delivered as an Amazon Connect Task or via email using Amazon Simple Email Service (SES), depending on your configuration.
 
 Voicemails are configured for a retention period of up to 7 days. After 7 days, the recordings are the presigned URL is no longer valid, and the recordings are lifecycled. During deployment, you have the option to configure the lifecycle window, if desired. Additionally, you have the option to keep, archive, or delete voicemail recordings. 
 
-## Deyployment and Management
+## Deployment and Management
 ### How to deploy
 To deploy Voicemail Express, you will need to complete the following:
 1. Complete the [Voicemail Express Prerequisites](Docs/vmx_prerequistes.md)
@@ -48,7 +48,7 @@ You can also read about the available [support options](Docs/vmx_support.md).
 Finally, a list of recent changes be found on the [Changelog](Docs/vmx_changelog.md) page.
 
 ## Roadmap
-The following items are currently planned for future releases. Changes to roadmap depend on feedback, however one overarching tenet of Vociemail Express is to keep the solution lightweight, with a minimal number of required services and administration, and to replace functionality with native Amazon Connect features as soon as they become available. 
+The following items are currently planned for future releases. Changes to roadmap depend on feedback, however one overarching tenet of Voicemail Express is to keep the solution lightweight, with a minimal number of required services and administration, and to replace functionality with native Amazon Connect features as soon as they become available. 
 -  **Jul-Sep 2024**
    -  [x] Update KVStoS3 function to Python
    -  [ ] Example flows
@@ -70,6 +70,6 @@ This is the published version of the code and templates that has been deployed t
 ## Acknowledgements
 While the code and documentation has been predominantly pushed by [Jason Douglas](https://github.com/dougjaso), this is largely due to internal team processes. This version of Voicemail Express 3 has been built and tested by a number of people including:
 
--  [Jason Douglas](https://github.com/dougjaso): Base solution design, roadmap, feature maangement, brute force Python developer, nitpicker.
--  [Steve Earl](https://github.com/SteveEarl-AWS): (Converted) Python code developer, (Formerly) NodeJS code developer, KVS processing magician, remodler of cabins.
+-  [Jason Douglas](https://github.com/dougjaso): Base solution design, roadmap, feature management, brute force Python developer, nitpicker.
+-  [Steve Earl](https://github.com/SteveEarl-AWS): (Converted) Python code developer, (Formerly) NodeJS code developer, KVS processing magician, remodeler of cabins.
 -  [Rob Pittfield](https://github.com/robpittfield2): Load testing mastermind, community relations, professional-grade sanity checker, herder of cats.
