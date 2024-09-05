@@ -8,8 +8,6 @@ In order to directly route to agent email addresses, you must be using SAML for 
 There are three additional contact attribute that applies to this delivery model:
 -  **email_from (Optional)**: (email address) email address to send the voicemail FROM. If this is not provided, the default FROM address configured during implementation will be used.
     -  Example: 'email_from':'my_company@example.com'
--  **email_to (Optional)**: (email address) email address to send the voicemail TO. If this is not provided, and it cannot be determined by looking at the agent or queue data, the default TO address configured during implementation will be used.
-    -  Example: 'email_to':'my_company@example.com'
 -  **email_template (Optional)**: (template name) Amazon SES email template to use when sending this email.  If this is not provided, the default email template configured during implementation will be used.
 
 ## Creating New Email Templates Using the Provided Lambda Functions
