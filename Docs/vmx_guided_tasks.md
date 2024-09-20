@@ -1,4 +1,4 @@
-![Voicemail Express Architecture](Docs/Img/guided_task.png)
+![Voicemail Express Architecture](Img/guided_task.png)
 # Delivering Voicemails as Amazon Connect Guided Tasks
 Delivering voicemail as an Amazon Connect Guided Task is the most secure and visual option available. Outside of making sure that the queues and routing profiles in Amazon Connect are configured to allow tasks, there is really no additional setup required. AContact flows are provided as an example with the solution, and are suitable for normal use. Tasks are queued and presented to agents just as any other contact would be, with a visual presentation using Agent Guides. In the guide, the agent will see an audio player UI to listen to the voicemail recording. The transcript will also be presented in a collapsible section. All other contact attributes, including the customer callback number, are included in the task information.
 
