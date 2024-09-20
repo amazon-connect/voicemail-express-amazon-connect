@@ -2,7 +2,7 @@
 Email delivery is fairly straightforward from an AWS perspective. Once you have [validated the email domain/addresses](vmx_prerequistes.md#setup-steps-for-email-delivery), and configured queue emails appropriately, there is little else to manage. The main effort here would be on creating additional email templates, where required.
 
 ## Routing Emails to Agent Email Addresses
-In order to directly route to agent email addresses, you must be using SAML for authentication and the agent's ID must be their email address. This is currently the only option for direct to agent voicemail via email. If you have not configured Connect in this manner, you can only use the queue option.
+Agent email address field is selectable on deployment and can be either: `Email, SecondaryEmail, or Username`. For SAML implementations, you will be using either `SecondaryEmail` or `Username`. Other implementations may use whichever field is appropriate. The agent's email address must be in one of these fields. 
 
 ## Additional Contact Attributes Specific to Email
 There are three additional contact attribute that applies to this delivery model:
