@@ -37,7 +37,7 @@ In order for the voicemail system to work, contacts must have certain contact at
     -  Example: 'vmx3_queue_arn':'arn:aws:connect:us-east-1:YOURACCOUNTNUMBER:instance/YOURINSTANCEID/queue/YOURQUEUEID'
 -  **vmx3_lang (Required)**: (Language code) the language code that Amazon Transcribe should use when transcribing the call. The list of supported languages and their language codes can be found in the [Amazon Transcribe Developer Guide](https://docs.aws.amazon.com/transcribe/latest/dg/supported-languages.html). **DEFAULT: en-US**
     -  Example: 'vmx3_lang':'en-US'
--  **vmx3_mode (Required)**: (task) which delivery mode should be used for this voicemail. In this version of Voicemail Express, all voicemails are delivered as Amazon Connect Tasks. If nothing is provided, the voicemail will be delivered via the default mode selected during implementation. **DEFAULT: task**
+-  **vmx3_mode (Required)**: (task) which delivery mode should be used for this voicemail. In this version of Voicemail Express, all voicemails are delivered as Amazon Connect Tasks. If nothing is provided, the voicemail will be delivered via the default mode selected during implementation. Options: `email, task, guided_task` **DEFAULT: guided_task**
     -  Example: 'vmx3_mode':'task'
 
 ### When to set the voicemail contact attributes
