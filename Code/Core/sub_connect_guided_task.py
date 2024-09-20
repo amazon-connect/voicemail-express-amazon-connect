@@ -16,16 +16,17 @@ current_version = '2024.09.01'
  **********************************************************************************************************************
 '''
 
-# Import the necessary modules for this function
+# Import the necessary modules for this flow to work
 import json
-import boto3
-import logging
 import os
+import logging
+import boto3
 
 # Establish logging configuration
 logger = logging.getLogger()
 
-def vmx3_to_ses_email(writer_payload):
+def vmx3_to_connect_guided_task(writer_payload):
+
     # Debug lines for troubleshooting
     logger.debug('Code Version: ' + current_version)
     logger.debug('VMX3 Package Version: ' + os.environ['package_version'])
@@ -34,7 +35,6 @@ def vmx3_to_ses_email(writer_payload):
     # Establish needed clients and resources
     try:
         connect_client = boto3.client('connect')
-        ses_client = boto3.client('sesv2')
         logger.debug('********** Clients initialized **********')
     
     except Exception as e:
@@ -42,72 +42,51 @@ def vmx3_to_ses_email(writer_payload):
         logger.error(e)
 
         return {'status':'complete','result':'ERROR','reason':'Failed to Initialize clients'}
+
+    logger.debug('Beginning Voicemail to Task')
     
-    logger.debug('Beginning Voicemail to email')
-
-    # Identify the proper address to send the email FROM
-    if 'email_from' in writer_payload['json_attributes']:
-        if writer_payload['json_attributes']['email_from']:
-            vmx3_email_from_address = writer_payload['json_attributes']['email_from']
-    else:
-        vmx3_email_from_address = os.environ['default_email_from']
-
-    logger.debug(vmx3_email_from_address)
-
-    # Set destination address
-    try:
-        vmx3_email_target_address = writer_payload['entity_email']
-
-    except:
-        vmx3_email_target_address = os.environ['default_email_target']
-
-    logger.debug(vmx3_email_target_address)
-
-    if '@' in vmx3_email_target_address:
-        logger.info('Valid email address format')
-
-    else:
-        vmx3_email_target_address = os.environ['default_email_target']
-
-    logger.debug('Target Email: ' + vmx3_email_target_address)
-
-    if 'email_template' in writer_payload['json_attributes']:
-        if writer_payload['json_attributes']['email_template']:
-            vmx3_email_template = writer_payload['json_attributes']['email_template']
-
-    else:
-        if writer_payload['entity_type'] == 'agent':
-            vmx3_email_template = os.environ['default_agent_email_template']
-
+    # Check for a task flow to use, if not, use default
+    if 'vmx3_guided_task_flow' in writer_payload['json_attributes']:
+        if writer_payload['json_attributes']['vmx3_guided_task_flow']:
+            contact_flow = writer_payload['json_attributes']['vmx3_guided_task_flow']
         else:
-            vmx3_email_template = os.environ['default_queue_email_template']
+            writer_payload.update({'vmx3_task_flow':os.environ['default_guided_task_flow']})
+            contact_flow = os.environ['default_guided_task_flow']
 
-    vmx3_email_data = json.dumps(writer_payload['json_attributes'])
+    else:
+        contact_flow = os.environ['default_guided_task_flow']
 
-    # Send the email
     try:
-
-        send_email = ses_client.send_email(
-            FromEmailAddress=vmx3_email_from_address,
-            Destination={
-                'ToAddresses': [
-                    vmx3_email_target_address,
-                ],
+        create_task = connect_client.start_task_contact(
+            InstanceId=writer_payload['instance_id'],
+            ContactFlowId=contact_flow,
+            PreviousContactId=writer_payload['contact_id'],
+            Attributes={
+                'Callback_Number': writer_payload['json_attributes']['callback_number'],
+                'contact_id' : writer_payload['contact_id'],
+                'transcript_contents' : writer_payload['json_attributes']['transcript_contents']
             },
-            Content={
-                'Template': {
-                    'TemplateName': vmx3_email_template,
-                    'TemplateData': vmx3_email_data
+            Name='Voicemail for ' + writer_payload['json_attributes']['entity_name'],
+            References={
+                'Date Voicemail Received': {
+                    'Value': writer_payload['json_attributes']['vmx3_dateTime'],
+                    'Type': 'STRING'
+                },
+                'Original Queue': {
+                    'Value': writer_payload['json_attributes']['entity_name'],
+                    'Type':'STRING'
                 }
-            }
+            },
+            Description='Amazon Connect Voicemail',
+            ClientToken=writer_payload['contact_id']
         )
-        logger.debug('********** Email request sent **********')
-        logger.debug(send_email)
+        logger.debug('********** Task Created **********')
+        logger.debug(create_task)
 
         return 'success'
 
     except Exception as e:
-        logger.error('********** Failed to send email **********')
+        logger.error('********** Failed to create task **********')
         logger.error(e)
 
         return 'fail'

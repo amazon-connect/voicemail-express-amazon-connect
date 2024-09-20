@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: Deploys the Voicemail Express SES email templates and consolidated Lambda for managing templates.
+Description: Deploys the Voicemail Express SES email templates and consolidated Lambda for managing templates. Updated for 2024.09.01
 
 Parameters:
   AWSRegion:
@@ -13,7 +13,7 @@ Parameters:
     Type: String
   LambdaLoggingLevel:
     Type: String
-  VMXCoreRoleArn:
+  VMXSESTemplateRoleArn:
     Type: String
 
 Resources:
@@ -72,7 +72,7 @@ Resources:
             - - 'VMXSESTool-'
               - !Ref ConnectInstanceAlias
       Handler: vmx3_ses_template_tool.lambda_handler
-      Role: !Ref VMXCoreRoleArn
+      Role: !Ref VMXSESTemplateRoleArn
       Runtime: python3.12
       Timeout: 30
 

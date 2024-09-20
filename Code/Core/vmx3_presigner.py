@@ -1,4 +1,4 @@
-current_version = '2024.08.01'
+current_version = '2024.09.01'
 '''
 **********************************************************************************************************************
  *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -88,10 +88,21 @@ def lambda_handler(event, context):
 
     # Generate the presigned URL and return
     try:
+        
+        vmx3_mode = event['vmx3_mode']
+        if vmx3_mode == 'task':
+            expires_in = int(os.environ['tasks_url_expire'])*86400
+
+        elif vmx3_mode == 'email':
+            expires_in = int(os.environ['email_url_expire'])*86400
+
+        else:
+            expires_in = 7*86400
+
         presigned_url = s3_client.generate_presigned_url('get_object',
             Params = {'Bucket': event['recording_bucket'],
                     'Key': event['recording_key']},
-            ExpiresIn = int(os.environ['s3_obj_lifecycle'])*86400
+            ExpiresIn = expires_in
         )
 
         logger.debug('********** Presigned URL Generated successfully **********')

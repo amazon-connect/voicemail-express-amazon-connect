@@ -1,4 +1,4 @@
-current_version = '2024.08.01'
+current_version = '2024.09.01'
 '''
 **********************************************************************************************************************
  *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -27,6 +27,7 @@ from datetime import datetime
 # Import the VMX Model Types
 import sub_connect_task
 import sub_ses_email
+import sub_connect_guided_task
 
 # Establish logging configuration
 logger = logging.getLogger()
@@ -75,28 +76,6 @@ def lambda_handler(event, context):
         logger.error(e)
         
         return {'status':'complete','result':'ERROR','reason':'Failed to extract keys'}
-
-    # Invoke presigner Lambda to generate presigned URL for recording
-    try:
-        input_params = {
-            'recording_bucket': recording_bucket,
-            'recording_key': recording_key
-        }
-
-        lambda_response = lambda_client.invoke(
-            FunctionName = os.environ['presigner_function_arn'],
-            InvocationType = 'RequestResponse',
-            Payload = json.dumps(input_params)
-        )
-        response_from_presigner = json.load(lambda_response['Payload'])
-        raw_url = response_from_presigner['presigned_url']
-        logger.debug('********** Presigner Completed **********')
-
-    except Exception as e:
-        logger.error('********** Record Result: Failed to generate presigned URL **********')
-        logger.error(e)
-        
-        return {'status':'complete','result':'ERROR','reason':'Failed to generate presigned URL'}
 
     # Extract the tags from the recording object
     try:
@@ -212,7 +191,7 @@ def lambda_handler(event, context):
             InitialContactId = contact_id
         )
         json_attributes = contact_attributes['Attributes']
-        json_attributes.update({'entity_name':entity_name,'entity_id':entity_id,'entity_description':entity_description,'transcript_contents':transcript_contents,'callback_number':json_attributes['vmx3_from'],'presigned_url':raw_url,'vmx3_dateTime': formatted_datetime})
+        json_attributes.update({'entity_name':entity_name,'entity_id':entity_id,'entity_description':entity_description,'transcript_contents':transcript_contents,'callback_number':json_attributes['vmx3_from'],'vmx3_dateTime': formatted_datetime})
         writer_payload.update({'json_attributes':json_attributes})
         contact_attributes = json.dumps(contact_attributes['Attributes'])
         logger.debug('Original Contact Attributes: ' + contact_attributes)
@@ -223,8 +202,6 @@ def lambda_handler(event, context):
         
         contact_attributes = 'UNKNOWN'
 
-    logger.debug(writer_payload)
-
     # Determing VMX mode
     if 'vmx3_mode' in writer_payload['json_attributes']:
         if writer_payload['json_attributes']['vmx3_mode']:
@@ -233,6 +210,35 @@ def lambda_handler(event, context):
         vmx3_mode = os.environ['default_vmx_mode']
 
     logger.debug('VM Mode set to {0}.'.format(vmx3_mode))
+
+    # Invoke presigner Lambda to generate presigned URL for recording
+    if vmx3_mode == 'task' or 'email':
+    
+        try:
+            input_params = {
+                'recording_bucket': recording_bucket,
+                'recording_key': recording_key,
+                'vmx3_mode': vmx3_mode
+            }
+
+            lambda_response = lambda_client.invoke(
+                FunctionName = os.environ['presigner_function_arn'],
+                InvocationType = 'RequestResponse',
+                Payload = json.dumps(input_params)
+            )
+            response_from_presigner = json.load(lambda_response['Payload'])
+            raw_url = response_from_presigner['presigned_url']
+            json_attributes.update({'presigned_url':raw_url})
+            writer_payload.update({'presigned_url':raw_url})
+            logger.debug('********** Presigner Completed **********')
+
+        except Exception as e:
+            logger.error('********** Record Result: Failed to generate presigned URL **********')
+            logger.error(e)
+            
+            return {'status':'complete','result':'ERROR','reason':'Failed to generate presigned URL'}
+
+    logger.debug(writer_payload)
 
     # Execute the correct VMX mode
     if vmx3_mode == 'task':
@@ -251,7 +257,11 @@ def lambda_handler(event, context):
         # Define the appropriate email target
         if writer_payload['entity_type'] == 'agent':
             try:
-                entity_email = get_agent['User']['IdentityInfo']['Email']
+                identity_type = os.environ['agent_email_key']
+                if identity_type == 'Username':
+                    entity_email = get_agent['User'][identity_type]
+                else:
+                    entity_email = get_agent['User']['IdentityInfo'][identity_type]
             except: 
                 entity_email = os.environ['default_email_target']
 
@@ -272,6 +282,17 @@ def lambda_handler(event, context):
             logger.error(e)
             
             return {'status':'complete','result':'ERROR','reason':'Failed to activate email function'}
+        
+    elif vmx3_mode == 'guided_task':
+
+        try:
+            write_vm = sub_connect_guided_task.vmx3_to_connect_guided_task(writer_payload)
+
+        except Exception as e:
+            logger.error('********** Failed to activate task function **********')
+            logger.error(e)
+            
+            return {'status':'complete','result':'ERROR','reason':'Failed to activate guided task function'}
 
     else:
         logger.error('********** Invalid mode selection **********')

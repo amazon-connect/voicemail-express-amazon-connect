@@ -1,0 +1,302 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Updates the VMX roles with appropriate policies. Updated for 2024.09.01.
+
+Parameters:
+  ConnectInstanceAlias:
+    Type: String
+  ConnectInstanceARN:
+    Type: String
+  VMXGuidedFlowPresignerRole:
+    Type: String
+  VMXKVStoS3Role:
+    Type: String
+  VMXPackagerRole:
+    Type: String
+  VMXPresignerRole:
+    Type: String
+  VMXSESTemplateRole:
+    Type: String
+  VMXTranscriberRole:
+    Type: String
+  VMXTranscriberErrorRole:
+    Type: String
+  VMXS3RecordingsBucketArn:
+    Type: String
+  VMXS3TranscriptsBucketArn:
+    Type: String
+  VMXKVSStreamPrefix:
+    Type: String
+  ConnectCTRStreamARN:
+    Type: String
+  AWSRegion:
+    Type: String
+  VMXPresignerArn:
+    Type: String
+
+Resources:
+  VMXGuidedFlowPresignerPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 's3:GetObject'
+              - 's3:GeneratePresignedUrl'
+            Resource:
+              !Join
+                - ''
+                - - !Ref VMXS3RecordingsBucketArn
+                  - '/*'
+      ManagedPolicyName:
+        !Join
+          - ''
+          - - 'VMX_Guide_Presigner_Policy_'
+            - !Ref ConnectInstanceAlias
+      Roles:
+        - !Ref VMXGuidedFlowPresignerRole
+
+  VMXKVStoS3Policy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'kinesisvideo:ListFragments'
+              - 'kinesisvideo:GetMediaForFragmentList'
+              - 'kinesisvideo:GetDataEndpoint'
+            Resource:
+              !Join
+                - ''
+                - - 'arn:aws:kinesisvideo:'
+                  - !Ref AWSRegion
+                  - ':'
+                  - !Ref AWS::AccountId
+                  - ':stream/'
+                  - !Ref VMXKVSStreamPrefix
+                  - '*'
+          - Effect: Allow
+            Action:
+              - 's3:PutObject'
+              - 's3:PutObjectTagging'
+            Resource:
+              !Join
+                - ''
+                - - !Ref VMXS3RecordingsBucketArn
+                  - '/*'
+          - Effect: Allow
+            Action:
+              - 'kinesis:ListShards'
+              - 'kinesis:GetRecords'
+              - 'kinesis:DescribeStream'
+              - 'kinesis:DescribeStreamSummary'
+              - 'kinesis:SubscribeToShard'
+              - 'kinesis:GetShardIterator'
+              - 'kinesis:ListShards'
+              - 'kinesis:ListStreams'
+            Resource: !Ref ConnectCTRStreamARN       
+      ManagedPolicyName:
+        !Join
+          - ''
+          - - 'VMX_KVS_to_S3_Policy_'
+            - !Ref ConnectInstanceAlias
+      Roles:
+        - !Ref VMXKVStoS3Role
+
+  VMXPackagerPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'connect:DescribeUser'
+              - 'connect:DescribeQueue'
+              - 'connect:GetContactAttributes'
+              - 'connect:UpdateContactAttributes'
+              - 'connect:StartTaskContact'
+            Resource: 
+              - !Ref ConnectInstanceARN
+              - !Join
+                - ''
+                - - !Ref ConnectInstanceARN
+                  - '/queue/*'
+              - !Join
+                - ''
+                - - !Ref ConnectInstanceARN
+                  - '/user/*'
+              - !Join
+                - ''
+                - - !Ref ConnectInstanceARN
+                  - '/contact-flow/*'
+              - !Join
+                - ''
+                - - !Ref ConnectInstanceARN
+                  - '/agent/*'
+              - !Join
+                - ''
+                - - !Ref ConnectInstanceARN
+                  - '/contact/*'
+          - Effect: Allow
+            Action:
+              - 'ses:SendEmail'
+              - 'ses:SendTemplatedEmail'
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - 'transcribe:DeleteTranscriptionJob'
+            Resource: 
+              !Join
+                - ''
+                - - 'arn:aws:transcribe:'
+                  - !Ref AWSRegion
+                  - ':'
+                  - !Ref AWS::AccountId
+                  - ':transcription-job/vmx3_*'
+          - Effect: Allow
+            Action:
+              - 's3:GetObjectTagging'
+              - 's3:GetObject'
+            Resource:
+              !Join
+                - ''
+                - - !Ref VMXS3RecordingsBucketArn
+                  - '/*'
+          - Effect: Allow
+            Action:
+              - 's3:GetObjectTagging'
+              - 's3:GetObject'
+            Resource:
+              !Join
+                - ''
+                - - !Ref VMXS3TranscriptsBucketArn
+                  - '/*'
+          - Effect: Allow
+            Action:
+              - 'lambda:InvokeFunction'
+            Resource: !Ref VMXPresignerArn
+      ManagedPolicyName:
+        !Join
+          - ''
+          - - 'VMX_Packager_Policy_'
+            - !Ref ConnectInstanceAlias
+      Roles:
+        - !Ref VMXPackagerRole
+
+  VMXPresignerPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 's3:GetObject'
+              - 's3:GeneratePresignedUrl'
+            Resource:
+              !Join
+                - ''
+                - - !Ref VMXS3RecordingsBucketArn
+                  - '/*'
+          - Effect: Allow
+            Action:
+              - 'secretsmanager:GetSecretValue'
+            Resource: 
+              !Join
+                - ''
+                - - 'arn:aws:secretsmanager:'
+                  - !Ref AWSRegion
+                  - ':'
+                  - !Ref AWS::AccountId
+                  - ':secret:VMX3_*'
+      ManagedPolicyName:
+        !Join
+          - ''
+          - - 'VMX_Presigner_Function_Policy_'
+            - !Ref ConnectInstanceAlias
+      Roles:
+        - !Ref VMXPresignerRole
+
+  VMXSESPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'ses:GetEmailTemplate'
+              - 'ses:UpdateEmailTemplate'
+              - 'ses:CreateEmailTemplate'
+              - 'ses:DeleteEmailTemplate'
+            Resource: '*'
+      ManagedPolicyName:
+        !Join
+          - ''
+          - - 'VMX_SES_Policy_'
+            - !Ref ConnectInstanceAlias
+      Roles:
+        - !Ref VMXSESTemplateRole
+
+  VMXTranscriberErrorPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 's3:PutObject'
+            Resource:
+              !Join
+                - ''
+                - - !Ref VMXS3TranscriptsBucketArn
+                  - '/*'
+      ManagedPolicyName:
+        !Join
+          - ''
+          - - 'VMX_Transcriber_Error_Policy_'
+            - !Ref ConnectInstanceAlias
+      Roles:
+        - !Ref VMXTranscriberErrorRole
+
+  VMXTranscriberPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 's3:GetObjectTagging'
+              - 's3:GetObject'
+            Resource:
+              !Join
+                - ''
+                - - !Ref VMXS3RecordingsBucketArn
+                  - '/*'
+          - Effect: Allow
+            Action:
+              - 'transcribe:StartTranscriptionJob'
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - 's3:PutObject'
+              - 's3:PutObjectTagging'
+            Resource:
+              !Join
+                - ''
+                - - !Ref VMXS3TranscriptsBucketArn
+                  - '/*'
+      ManagedPolicyName:
+        !Join
+          - ''
+          - - 'VMX_Transcriber_Policy_'
+            - !Ref ConnectInstanceAlias
+      Roles:
+        - !Ref VMXTranscriberRole

@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: Deploys the Voicemail Express content triggers.
+Description: Deploys the Voicemail Express content triggers. Updated for 2024.09.01
 
 Parameters:
   EXPTemplateVersion:
@@ -25,8 +25,20 @@ Parameters:
     Type: String
   VMXTranscribeErrorArn:
     Type: String
+  ConnectInstanceARN:
+    Type: String
+  VMXGuidedFlowPresignerArn:
+    Type: String
 
 Resources:
+
+  IntegrationAssociation:
+    Type: AWS::Connect::IntegrationAssociation
+    Properties:
+      InstanceId: !Ref ConnectInstanceARN
+      IntegrationType: LAMBDA_FUNCTION
+      IntegrationArn: !Ref VMXGuidedFlowPresignerArn
+
   RecordingsBucketPermission:
     Type: AWS::Lambda::Permission
     Properties:
