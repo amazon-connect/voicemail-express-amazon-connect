@@ -211,7 +211,7 @@ Resources:
           s3_transcripts_bucket:
             Ref: VMXS3TranscriptsBucket
           presigner_function_arn:
-            Ref: VMXPresigner
+            !If [NonGuidedOptions, !Ref VMXPresigner, 'AWS::NoValue']
           default_task_flow:
             !If [ConnectTasksEnabled, !Ref VMXDefaultTaskFlow, 'AWS::NoValue']
           default_guided_task_flow:
