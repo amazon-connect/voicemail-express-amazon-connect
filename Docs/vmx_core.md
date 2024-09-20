@@ -21,7 +21,7 @@ Voicemails are captured in the Amazon Connect contact flow, processed post-call,
     1.  Retrieves the transcript file from S3
     1.  Uses the data in the transcript file identify the contact and find the recording
     1.  Retrieves the metadata from the recording file
-    1.  Invokes the VMX3-Presigner function to generate a presigned URL for the recording
+    1.  Invokes the VMX3-Presigner function to generate a presigned URL for the recording (for standard Task and Email modes only)
     1.  Determines queue/agent information, destination, etc
     1.  Invokes the sub-function for the delivery mode
     1.  Once delivery is successful, it deletes the existing transcription job
