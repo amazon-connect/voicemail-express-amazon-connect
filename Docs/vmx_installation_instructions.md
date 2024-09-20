@@ -9,7 +9,7 @@ Voicemail Express is deployed via AWS CloudFormation. In order to launch the tem
    - **IMPORTANT NOTE:** This solution is designed to receive CTRs via Kinesis Data Streams only, not Kinesis Firehose. It WILL NOT work with a Kinesis firehose.
 -  Amazon Connect Instance Alias from the [Amazon Connect console](https://console.aws.amazon.com/connect/home)
 -  Amazon Connect Instance ARN from the [Amazon Connect console](https://console.aws.amazon.com/connect/home)
--  Kinesis Vide Streams prefix for the Amazon Connect Instance ARN from the [Amazon Connect console](https://console.aws.amazon.com/connect/home)
+-  Kinesis Video Streams prefix for the Amazon Connect Instance ARN from the [Amazon Connect console](https://console.aws.amazon.com/connect/home)
 -  Default agent ID to use for testing
 -  Default queue ARN to use for testing
 
