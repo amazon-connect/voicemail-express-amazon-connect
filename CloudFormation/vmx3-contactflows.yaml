@@ -221,4 +221,5 @@ Outputs:
       Value: !Select [1, !Split ["contact-flow/", !Ref VMXDefaultGuidedTaskFlow]]
     VMXGuidedFlowPresignerArn:
       Description: ARN of the Guided Flow presigner function
+      Condition: ConnectGuidedTasksEnabled
       Value: !GetAtt VMXGuidedFlowPresigner.Arn

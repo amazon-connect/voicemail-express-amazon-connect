@@ -212,7 +212,7 @@ def lambda_handler(event, context):
     logger.debug('VM Mode set to {0}.'.format(vmx3_mode))
 
     # Invoke presigner Lambda to generate presigned URL for recording
-    if vmx3_mode == 'task' or 'email':
+    if vmx3_mode == 'task' or vmx3_mode == 'email':
     
         try:
             input_params = {

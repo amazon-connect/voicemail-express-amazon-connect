@@ -33,10 +33,32 @@ Parameters:
     Type: String
   VMXPresignerArn:
     Type: String
+  EnableVMToConnectTask:
+    Type: String
+  EnableVMToEmail:
+    Type: String
+  EnableVMToConnectGuidedTask:
+    Type: String
+
+Conditions:
+  NonGuidedOptions: !Or
+    - !Equals
+      - !Ref EnableVMToConnectTask
+      - 'yes'
+    - !Equals
+      - !Ref EnableVMToEmail
+      - 'yes'
+  AWSEmailEnabled: !Equals
+    - !Ref EnableVMToEmail
+    - 'yes'
+  ConnectGuidedTasksEnabled: !Equals
+    - !Ref EnableVMToConnectGuidedTask
+    - 'yes'
 
 Resources:
   VMXGuidedFlowPresignerPolicy:
     Type: AWS::IAM::ManagedPolicy
+    Condition: ConnectGuidedTasksEnabled
     Properties:
       PolicyDocument:
         Version: 2012-10-17
@@ -176,10 +198,6 @@ Resources:
                 - ''
                 - - !Ref VMXS3TranscriptsBucketArn
                   - '/*'
-          - Effect: Allow
-            Action:
-              - 'lambda:InvokeFunction'
-            Resource: !Ref VMXPresignerArn
       ManagedPolicyName:
         !Join
           - ''
@@ -190,6 +208,7 @@ Resources:
 
   VMXPresignerPolicy:
     Type: AWS::IAM::ManagedPolicy
+    Condition: NonGuidedOptions
     Properties:
       PolicyDocument:
         Version: 2012-10-17
@@ -224,6 +243,7 @@ Resources:
 
   VMXSESPolicy:
     Type: AWS::IAM::ManagedPolicy
+    Condition: AWSEmailEnabled
     Properties:
       PolicyDocument:
         Version: 2012-10-17
@@ -300,3 +320,22 @@ Resources:
             - !Ref ConnectInstanceAlias
       Roles:
         - !Ref VMXTranscriberRole
+  
+  VMXPackagerPolicyAddOn:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: NonGuidedOptions
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'lambda:InvokeFunction'
+            Resource: !Ref VMXPresignerArn
+      ManagedPolicyName:
+        !Join
+          - ''
+          - - 'VMX_Packager_AddOn_Policy_'
+            - !Ref ConnectInstanceAlias
+      Roles:
+        - !Ref VMXPackagerRole

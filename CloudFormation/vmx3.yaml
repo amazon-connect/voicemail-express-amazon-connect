@@ -436,7 +436,7 @@ Resources:
           - !GetAtt VMXContactFlowStack.Outputs.VMXExampleTaskFlowID
           - AWS::NoValue
         VMXDefaultGuidedTaskFlow: !If
-          - ConnectTasksEnabled
+          - ConnectGuidedTasksEnabled
           - !GetAtt VMXContactFlowStack.Outputs.VMXExampleGuidedTaskFlowID
           - AWS::NoValue
         VMXSecrets: !If
@@ -506,7 +506,13 @@ Resources:
         VMXKVSStreamPrefix: !Ref VMXKVSStreamPrefix
         ConnectCTRStreamARN: !Ref ConnectCTRStreamARN
         AWSRegion: !Ref AWSRegion
-        VMXPresignerArn: !GetAtt VMXLambdaStack.Outputs.VMXPresignerArn
+        VMXPresignerArn: !If
+          - NonGuidedOptions
+          - !GetAtt VMXLambdaStack.Outputs.VMXPresignerArn
+          - AWS::NoValue
+        EnableVMToEmail: !Ref EnableVMToEmail
+        EnableVMToConnectTask: !Ref EnableVMToConnectTask
+        EnableVMToConnectGuidedTask: !Ref EnableVMToConnectGuidedTask
       TemplateURL: !Join
         - ''
         - - https://
@@ -538,7 +544,12 @@ Resources:
         VMXKVStoS3: !GetAtt VMXLambdaStack.Outputs.VMXKVStoS3
         ConnectInstanceAlias: !Ref ConnectInstanceAlias
         VMXTranscribeErrorArn: !GetAtt VMXLambdaStack.Outputs.VMXTranscribeErrorArn
-        VMXGuidedFlowPresignerArn: !GetAtt VMXContactFlowStack.Outputs.VMXGuidedFlowPresignerArn
+        VMXGuidedFlowPresignerArn: !If
+          - ConnectGuidedTasksEnabled
+          - !GetAtt VMXContactFlowStack.Outputs.VMXGuidedFlowPresignerArn
+          - AWS::NoValue
+        EnableVMToConnectGuidedTask: !Ref EnableVMToConnectGuidedTask
+
       TemplateURL: !Join
         - ''
         - - https://

@@ -29,11 +29,19 @@ Parameters:
     Type: String
   VMXGuidedFlowPresignerArn:
     Type: String
+  EnableVMToConnectGuidedTask:
+    Type: String
+
+Conditions:
+  ConnectGuidedTasksEnabled: !Equals
+    - !Ref EnableVMToConnectGuidedTask
+    - 'yes'
 
 Resources:
 
   IntegrationAssociation:
     Type: AWS::Connect::IntegrationAssociation
+    Condition: ConnectGuidedTasksEnabled
     Properties:
       InstanceId: !Ref ConnectInstanceARN
       IntegrationType: LAMBDA_FUNCTION
