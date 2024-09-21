@@ -1,4 +1,4 @@
-current_version = '2024.08.01'
+current_version = '2024.09.01'
 '''
 **********************************************************************************************************************
  *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *

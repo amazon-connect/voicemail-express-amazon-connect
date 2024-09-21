@@ -1,12 +1,20 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Deploys the Voicemail Express contact flows, as required.
+Description: Deploys the Voicemail Express contact flows, as required. Updated for 2024.09.01.
 
 Parameters:
+  EXPTemplateVersion:
+    Type: String
+  EXPDevBucketPrefix:
+    Type: String
+  AWSRegion:
+    Type: String
   ConnectInstanceAlias:
     Type: String
   ConnectInstanceARN:
     Type: String
   EnableVMToConnectTask:
+    Type: String
+  EnableVMToConnectGuidedTask:
     Type: String
   EnableVMToEmail:
     Type: String
@@ -18,10 +26,27 @@ Parameters:
     Type: String
   VMTestQueueARN:
     Type: String
+  VMXS3RecordingsBucket:
+    Type: String
+  GuidedTaskRecordingLinksExpireInXMinutes:
+    Type: String
+  VMXGuidedFlowPresignerRoleArn:
+    Type: String
+  VMXGuidedFlowPresignerRole:
+    Type: String
+  LambdaLoggingLevel:
+    Type: String
 
 Conditions:
-  ConnectTasksEnabled: !Equals [!Ref EnableVMToConnectTask, yes]
-  AWSEmailEnabled: !Equals [!Ref EnableVMToEmail, yes]
+  ConnectTasksEnabled: !Equals 
+    - !Ref EnableVMToConnectTask
+    - 'yes'
+  ConnectGuidedTasksEnabled: !Equals
+    - !Ref EnableVMToConnectGuidedTask
+    - 'yes'
+  AWSEmailEnabled: !Equals
+    - !Ref EnableVMToEmail
+    - 'yes'
 
 Resources:
   VMXCoreFlowModule:
@@ -34,9 +59,26 @@ Resources:
       Name:
         !Join
           - ''
-          - - 'VMX3-CoreFlowModule-'
+          - - 'VMX3_Main_VM_Module_'
             - !Ref ConnectInstanceAlias
       State: ACTIVE
+
+  VMXPlayerView:
+    Type: AWS::Connect::View
+    Condition: ConnectGuidedTasksEnabled
+    Properties:
+      Name: 
+        !Join
+          - ''
+          - - 'VMX3_Player_View_'
+            - !Ref ConnectInstanceAlias
+      Description: View for Incoming Voicemail Message
+      InstanceArn: !Ref ConnectInstanceARN
+      Actions: []
+      Template: {"Head":{"Configuration":{"Layout":{"Columns":"12"}},"Title":"VMX_Player_View"},"Body":[{"_id":"Header_1726626834980","Type":"Header","Props":{"variant":"h2","description":""},"Content":["Incoming Voicemail Message"]},{"_id":"Container_1726627102291","Type":"Container","Props":{"HideBorder":false},"Content":[{"_id":"Player_HTML_Box","Type":"TemplateStringComponent","Props":{"TemplateString":"$.Player_HTML_Box.TemplateString"},"Content":[]}],"Configuration":{"Layout":{"Columns":6}}},{"_id":"Transcript_Section","Type":"ExpandableSection","Props":{"header":"Voicemail Transcript","variant":"default"},"Content":[{"_id":"TemplateStringComponent_1726626461415","Type":"TemplateStringComponent","Props":{"TemplateString":"$.TemplateStringComponent_1726626461415.TemplateString"},"Content":[]}]}]}
+      Tags: 
+        - Key: CreatedBy
+          Value: CloudFormation
 
   VMXExampleTaskFlow:
     Type: AWS::Connect::ContactFlow
@@ -49,24 +91,112 @@ Resources:
       Name:
         !Join
           - ''
-          - - 'VMX3-BasicTaskFlow-'
+          - - 'VMX3_Basic_Task_Flow_'
+            - !Ref ConnectInstanceAlias
+      State: ACTIVE
+      Type: CONTACT_FLOW
+
+  VMXGuidedFlowPresigner:
+    Type: AWS::Lambda::Function
+    Condition: ConnectGuidedTasksEnabled
+    Properties:
+      Code:
+        S3Bucket:
+          !Join
+            - ''
+            - - !Ref EXPDevBucketPrefix
+              - 'vmx-source-'
+              - !Ref AWSRegion
+        S3Key:
+          !Join
+          - ''
+          - - 'vmx3/'
+            - !Ref EXPTemplateVersion
+            - /zip/vmx3_guided_flow_presigner.py.zip
+      Description: Generates presigned URL for the guided task experience.
+      Environment:
+        Variables:
+          aws_region:
+            Ref: AWSRegion
+          s3_recordings_bucket:
+            Ref: VMXS3RecordingsBucket
+          package_version:
+            Ref: EXPTemplateVersion
+          presigned_url_expiry:
+            Ref: GuidedTaskRecordingLinksExpireInXMinutes
+      FunctionName:
+        !Join
+            - ''
+            - - 'VMX3_Guided_Flow_Presigner_'
+              - !Ref ConnectInstanceAlias
+      Handler: vmx3_guided_flow_presigner.lambda_handler
+      Role: !Ref VMXGuidedFlowPresignerRoleArn
+      Runtime: python3.12
+      LoggingConfig:
+        ApplicationLogLevel:
+          Ref: LambdaLoggingLevel
+        LogFormat: JSON
+        SystemLogLevel: INFO
+      Timeout: 30
+
+  VMXExampleGuidedTaskAgentFlow:
+    Type: AWS::Connect::ContactFlow
+    Condition: ConnectGuidedTasksEnabled
+    DependsOn:
+      - VMXGuidedFlowPresigner
+      - VMXPlayerView
+    Properties:
+      Content: !Sub
+        - "{\"Version\":\"2019-10-30\",\"StartAction\":\"5aa58466-9012-4121-9eb9-e0db0d4dbe9c\",\"Metadata\":{\"entryPointPosition\":{\"x\":40,\"y\":40},\"ActionMetadata\":{\"f8c10e30-fd62-4d86-a275-9a0c1cfbc086\":{\"position\":{\"x\":1551.2,\"y\":164.8}},\"Show VMX Guided Task view\":{\"position\":{\"x\":1324,\"y\":169.6},\"isFriendlyName\":true,\"parameters\":{\"ViewResource\":{\"Id\":{\"displayName\":\"${VMPLAYERVIEW}\"}},\"InvocationTimeLimitSeconds\":{\"unit\":1},\"ViewData\":{\"Player_HTML_Box\":{\"useJson\":true},\"TemplateStringComponent_1726626461415\":{\"useJson\":true}}}},\"Clear transcript contact attribute\":{\"position\":{\"x\":1045.6,\"y\":168.8},\"isFriendlyName\":true,\"dynamicParams\":[]},\"5aa58466-9012-4121-9eb9-e0db0d4dbe9c\":{\"position\":{\"x\":80,\"y\":164.8}},\"Write transcript to flow attribute\":{\"position\":{\"x\":807.2,\"y\":168.8},\"isFriendlyName\":true,\"parameters\":{\"FlowAttributes\":{\"transcript_contents\":{\"Value\":{\"useDynamic\":true}}}}},\"Set Presigner ARN\":{\"position\":{\"x\":336.8,\"y\":159.2},\"isFriendlyName\":true},\"Generate Presigned URL\":{\"position\":{\"x\":584,\"y\":165.6},\"isFriendlyName\":true,\"parameters\":{\"LambdaFunctionARN\":{\"useDynamic\":true}},\"dynamicMetadata\":{},\"useDynamic\":true}},\"Annotations\":[]},\"Actions\":[{\"Parameters\":{},\"Identifier\":\"f8c10e30-fd62-4d86-a275-9a0c1cfbc086\",\"Type\":\"DisconnectParticipant\",\"Transitions\":{}},{\"Parameters\":{\"ViewResource\":{\"Id\":\"${VMPLAYERVIEWARN}:$LATEST\"},\"InvocationTimeLimitSeconds\":\"600\",\"ViewData\":{\"Player_HTML_Box\":{\"TemplateString\":\"<div><h3>Play Voicemail</h3><audio controls controlsList='nodownload' preload='auto' src=$.External.presigned_url></audio></div>\"},\"TemplateStringComponent_1726626461415\":{\"TemplateString\":\"<div>$.FlowAttributes.transcript_contents</div>\"}}},\"Identifier\":\"Show VMX Guided Task view\",\"Type\":\"ShowView\",\"Transitions\":{\"NextAction\":\"f8c10e30-fd62-4d86-a275-9a0c1cfbc086\",\"Errors\":[{\"NextAction\":\"f8c10e30-fd62-4d86-a275-9a0c1cfbc086\",\"ErrorType\":\"NoMatchingCondition\"},{\"NextAction\":\"f8c10e30-fd62-4d86-a275-9a0c1cfbc086\",\"ErrorType\":\"NoMatchingError\"},{\"NextAction\":\"f8c10e30-fd62-4d86-a275-9a0c1cfbc086\",\"ErrorType\":\"TimeLimitExceeded\"}]}},{\"Parameters\":{\"Attributes\":{\"transcript_contents\":\"DELETED\"},\"TargetContact\":\"Current\"},\"Identifier\":\"Clear transcript contact attribute\",\"Type\":\"UpdateContactAttributes\",\"Transitions\":{\"NextAction\":\"Show VMX Guided Task view\",\"Errors\":[{\"NextAction\":\"Show VMX Guided Task view\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"FlowLoggingBehavior\":\"Enabled\"},\"Identifier\":\"5aa58466-9012-4121-9eb9-e0db0d4dbe9c\",\"Type\":\"UpdateFlowLoggingBehavior\",\"Transitions\":{\"NextAction\":\"Set Presigner ARN\"}},{\"Parameters\":{\"FlowAttributes\":{\"transcript_contents\":{\"Value\":\"$.Attributes.transcript_contents\"}}},\"Identifier\":\"Write transcript to flow attribute\",\"Type\":\"UpdateFlowAttributes\",\"Transitions\":{\"NextAction\":\"Clear transcript contact attribute\",\"Errors\":[{\"NextAction\":\"Clear transcript contact attribute\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"FlowAttributes\":{\"presigner_arn\":{\"Value\":\"${VMGUIDEDFLOWPRESIGNER}\"}}},\"Identifier\":\"Set Presigner ARN\",\"Type\":\"UpdateFlowAttributes\",\"Transitions\":{\"NextAction\":\"Generate Presigned URL\",\"Errors\":[{\"NextAction\":\"Generate Presigned URL\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"LambdaFunctionARN\":\"$.FlowAttributes.presigner_arn\",\"InvocationTimeLimitSeconds\":\"8\",\"ResponseValidation\":{\"ResponseType\":\"JSON\"}},\"Identifier\":\"Generate Presigned URL\",\"Type\":\"InvokeLambdaFunction\",\"Transitions\":{\"NextAction\":\"Write transcript to flow attribute\",\"Errors\":[{\"NextAction\":\"Write transcript to flow attribute\",\"ErrorType\":\"NoMatchingError\"}]}}]}"
+        - VMGUIDEDFLOWPRESIGNER: !GetAtt VMXGuidedFlowPresigner.Arn
+          VMPLAYERVIEW: !Ref VMXPlayerView
+          VMPLAYERVIEWARN: !GetAtt VMXPlayerView.ViewArn
+      Description: Agent Guide view for voicemail.
+      InstanceArn:
+        Ref: ConnectInstanceARN
+      Name:
+        !Join
+          - ''
+          - - 'VMX3_Guided_Task_Agent_Flow_'
+            - !Ref ConnectInstanceAlias
+      State: ACTIVE
+      Type: CONTACT_FLOW
+
+  VMXDefaultGuidedTaskFlow:
+    Type: AWS::Connect::ContactFlow
+    Condition: ConnectGuidedTasksEnabled
+    DependsOn: VMXExampleGuidedTaskAgentFlow
+    Properties:
+      Content: !Sub
+        - "{\"Version\":\"2019-10-30\",\"StartAction\":\"Set the target queue\",\"Metadata\":{\"entryPointPosition\":{\"x\":20.8,\"y\":20},\"ActionMetadata\":{\"End flow\":{\"position\":{\"x\":474.4,\"y\":241.6},\"isFriendlyName\":true},\"Route voicemail\":{\"position\":{\"x\":147.2,\"y\":231.2},\"isFriendlyName\":true},\"Set Guided Task Flow\":{\"position\":{\"x\":660,\"y\":0.8},\"isFriendlyName\":true,\"parameters\":{\"EventHooks\":{\"DefaultAgentUI\":{\"useDynamic\":true}}}},\"Set the target queue\":{\"position\":{\"x\":144.8,\"y\":-5.6},\"isFriendlyName\":true,\"parameters\":{\"QueueId\":{\"useDynamic\":true}},\"useDynamic\":true},\"Set Flow Attribute\":{\"position\":{\"x\":409.6,\"y\":-1.6},\"isFriendlyName\":true}},\"Annotations\":[]},\"Actions\":[{\"Parameters\":{},\"Identifier\":\"End flow\",\"Type\":\"DisconnectParticipant\",\"Transitions\":{}},{\"Parameters\":{},\"Identifier\":\"Route voicemail\",\"Type\":\"TransferContactToQueue\",\"Transitions\":{\"NextAction\":\"End flow\",\"Errors\":[{\"NextAction\":\"End flow\",\"ErrorType\":\"QueueAtCapacity\"},{\"NextAction\":\"End flow\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"EventHooks\":{\"DefaultAgentUI\":\"$.FlowAttributes.guided_flow\"}},\"Identifier\":\"Set Guided Task Flow\",\"Type\":\"UpdateContactEventHooks\",\"Transitions\":{\"NextAction\":\"Route voicemail\",\"Errors\":[{\"NextAction\":\"Route voicemail\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"QueueId\":\"$.Attributes.vmx3_queue_arn\"},\"Identifier\":\"Set the target queue\",\"Type\":\"UpdateContactTargetQueue\",\"Transitions\":{\"NextAction\":\"Set Flow Attribute\",\"Errors\":[{\"NextAction\":\"Set Flow Attribute\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"FlowAttributes\":{\"guided_flow\":{\"Value\":\"${GUIDEDTASKGUIDEFLOW}\"}}},\"Identifier\":\"Set Flow Attribute\",\"Type\":\"UpdateFlowAttributes\",\"Transitions\":{\"NextAction\":\"Set Guided Task Flow\",\"Errors\":[{\"NextAction\":\"Set Guided Task Flow\",\"ErrorType\":\"NoMatchingError\"}]}}]}"
+        - GUIDEDTASKGUIDEFLOW: !Ref VMXExampleGuidedTaskAgentFlow
+      Description: Sample basic guided task flow for voicemail.
+      InstanceArn:
+        Ref: ConnectInstanceARN
+      Name:
+        !Join
+          - ''
+          - - 'VMX3_Guided_Task_Flow_'
             - !Ref ConnectInstanceAlias
       State: ACTIVE
       Type: CONTACT_FLOW
 
   VMXAWSTestFlow:
     Type: AWS::Connect::ContactFlow
-    DependsOn:
-        - VMXCoreFlowModule
     Properties:
       Content: !Sub
-        - "{\"Version\":\"2019-10-30\",\"StartAction\":\"Turn on flow logging\",\"Metadata\":{\"entryPointPosition\":{\"x\":-520,\"y\":-42.4},\"ActionMetadata\":{\"Initialization greeting\":{\"position\":{\"x\":880,\"y\":271.2},\"isFriendlyName\":true},\"Set remaining required attributes for VMX3\":{\"position\":{\"x\":1143.2,\"y\":273.6},\"isFriendlyName\":true,\"parameters\":{\"Attributes\":{\"vmx3_from\":{\"useDynamic\":true},\"vmx3_queue_arn\":{\"useDynamic\":true}}},\"dynamicParams\":[\"vmx3_from\",\"vmx3_queue_arn\"]},\"Select Delivery Model\":{\"position\":{\"x\":-539.2,\"y\":300},\"isFriendlyName\":true,\"conditionMetadata\":[{\"id\":\"42baf5b2-89d3-4c33-9504-f3bd89ee3956\",\"value\":\"1\"},{\"id\":\"51fcf372-0ee8-4de5-970a-bb59410c41b1\",\"value\":\"3\"}]},\"Set task delivery mode\":{\"position\":{\"x\":-209.6,\"y\":220},\"isFriendlyName\":true,\"dynamicParams\":[]},\"Set email delivery mode\":{\"position\":{\"x\":-201.6,\"y\":432.8},\"isFriendlyName\":true,\"dynamicParams\":[]},\"Set the destination type\":{\"position\":{\"x\":76.8,\"y\":351.2},\"isFriendlyName\":true,\"conditionMetadata\":[{\"id\":\"94472f84-07ae-4121-a63a-6e24e624714c\",\"value\":\"1\"},{\"id\":\"58fbf98f-fe94-499e-9158-a9885821ed51\",\"value\":\"2\"}]},\"Invoke the core VMX3 module\":{\"position\":{\"x\":1403.2,\"y\":272.8},\"isFriendlyName\":true,\"parameters\":{\"FlowModuleId\":{\"useDynamic\":true}},\"useDynamic\":true},\"Set agent queue\":{\"position\":{\"x\":343.2,\"y\":144.8},\"isFriendlyName\":true,\"parameters\":{\"AgentId\":{\"useDynamic\":true}},\"useDynamic\":true},\"Set standard queue\":{\"position\":{\"x\":636,\"y\":270.4},\"isFriendlyName\":true,\"parameters\":{\"QueueId\":{\"useDynamic\":true}},\"useDynamic\":true},\"Nothing selected\":{\"position\":{\"x\":-242.4,\"y\":666.4},\"isFriendlyName\":true},\"Error message\":{\"position\":{\"x\":352.8,\"y\":556.8},\"isFriendlyName\":true},\"End Test\":{\"position\":{\"x\":357.6,\"y\":760.8},\"isFriendlyName\":true},\"Turn on flow logging\":{\"position\":{\"x\":-398.4,\"y\":-39.2},\"isFriendlyName\":true},\"Main test flow greeting\":{\"position\":{\"x\":81.6,\"y\":-40.8},\"isFriendlyName\":true},\"Set all of the test attributes\":{\"position\":{\"x\":-160.8,\"y\":-41.6},\"isFriendlyName\":true,\"dynamicParams\":[]}},\"Annotations\":[]},\"Actions\":[{\"Parameters\":{\"Text\":\"Connecting to the voicemail flow.\"},\"Identifier\":\"Initialization greeting\",\"Type\":\"MessageParticipant\",\"Transitions\":{\"NextAction\":\"Set remaining required attributes for VMX3\",\"Errors\":[{\"NextAction\":\"Set remaining required attributes for VMX3\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"Attributes\":{\"vmx3_from\":\"$.CustomerEndpoint.Address\",\"vmx3_lang\":\"en-US\",\"vmx3_queue_arn\":\"$.Queue.ARN\"},\"TargetContact\":\"Current\"},\"Identifier\":\"Set remaining required attributes for VMX3\",\"Type\":\"UpdateContactAttributes\",\"Transitions\":{\"NextAction\":\"Invoke the core VMX3 module\",\"Errors\":[{\"NextAction\":\"Invoke the core VMX3 module\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"StoreInput\":\"False\",\"InputTimeLimitSeconds\":\"5\",\"Text\":\"Press 1 to test task delivery, press 3 to test email delivery.\"},\"Identifier\":\"Select Delivery Model\",\"Type\":\"GetParticipantInput\",\"Transitions\":{\"NextAction\":\"Nothing selected\",\"Conditions\":[{\"NextAction\":\"Set task delivery mode\",\"Condition\":{\"Operator\":\"Equals\",\"Operands\":[\"1\"]}},{\"NextAction\":\"Set email delivery mode\",\"Condition\":{\"Operator\":\"Equals\",\"Operands\":[\"3\"]}}],\"Errors\":[{\"NextAction\":\"Nothing selected\",\"ErrorType\":\"InputTimeLimitExceeded\"},{\"NextAction\":\"Nothing selected\",\"ErrorType\":\"NoMatchingCondition\"},{\"NextAction\":\"Nothing selected\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"Attributes\":{\"vmx3_mode\":\"task\"},\"TargetContact\":\"Current\"},\"Identifier\":\"Set task delivery mode\",\"Type\":\"UpdateContactAttributes\",\"Transitions\":{\"NextAction\":\"Set the destination type\",\"Errors\":[{\"NextAction\":\"Set the destination type\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"Attributes\":{\"vmx3_mode\":\"email\"},\"TargetContact\":\"Current\"},\"Identifier\":\"Set email delivery mode\",\"Type\":\"UpdateContactAttributes\",\"Transitions\":{\"NextAction\":\"Set the destination type\",\"Errors\":[{\"NextAction\":\"Set the destination type\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"StoreInput\":\"False\",\"InputTimeLimitSeconds\":\"5\",\"Text\":\"Press 1 to test delivery of voicemail to an agent's personal queue. Press 2 to test delivery to a standard queue.\"},\"Identifier\":\"Set the destination type\",\"Type\":\"GetParticipantInput\",\"Transitions\":{\"NextAction\":\"Nothing selected\",\"Conditions\":[{\"NextAction\":\"Set agent queue\",\"Condition\":{\"Operator\":\"Equals\",\"Operands\":[\"1\"]}},{\"NextAction\":\"Set standard queue\",\"Condition\":{\"Operator\":\"Equals\",\"Operands\":[\"2\"]}}],\"Errors\":[{\"NextAction\":\"Nothing selected\",\"ErrorType\":\"InputTimeLimitExceeded\"},{\"NextAction\":\"Nothing selected\",\"ErrorType\":\"NoMatchingCondition\"},{\"NextAction\":\"Nothing selected\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"FlowModuleId\":\"$.Attributes.vmx3_core_module\"},\"Identifier\":\"Invoke the core VMX3 module\",\"Type\":\"InvokeFlowModule\",\"Transitions\":{\"NextAction\":\"Error message\",\"Errors\":[{\"NextAction\":\"Error message\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"AgentId\":\"$.Attributes.vmx3_test_agent\"},\"Identifier\":\"Set agent queue\",\"Type\":\"UpdateContactTargetQueue\",\"Transitions\":{\"NextAction\":\"Initialization greeting\",\"Errors\":[{\"NextAction\":\"Error message\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"QueueId\":\"$.Attributes.vmx3_test_queue\"},\"Identifier\":\"Set standard queue\",\"Type\":\"UpdateContactTargetQueue\",\"Transitions\":{\"NextAction\":\"Initialization greeting\",\"Errors\":[{\"NextAction\":\"Error message\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"Text\":\"No option selected. Ending test flow.\"},\"Identifier\":\"Nothing selected\",\"Type\":\"MessageParticipant\",\"Transitions\":{\"NextAction\":\"End Test\",\"Errors\":[{\"NextAction\":\"End Test\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"Text\":\"We have encountered a system error. Please check flow logs to determine the issue.\"},\"Identifier\":\"Error message\",\"Type\":\"MessageParticipant\",\"Transitions\":{\"NextAction\":\"End Test\",\"Errors\":[{\"NextAction\":\"End Test\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{},\"Identifier\":\"End Test\",\"Type\":\"DisconnectParticipant\",\"Transitions\":{}},{\"Parameters\":{\"FlowLoggingBehavior\":\"Enabled\"},\"Identifier\":\"Turn on flow logging\",\"Type\":\"UpdateFlowLoggingBehavior\",\"Transitions\":{\"NextAction\":\"Set all of the test attributes\"}},{\"Parameters\":{\"Text\":\"This is the voicemail express test flow. It allows you to quickly validate the deployment. \"},\"Identifier\":\"Main test flow greeting\",\"Type\":\"MessageParticipant\",\"Transitions\":{\"NextAction\":\"Select Delivery Model\",\"Errors\":[{\"NextAction\":\"Select Delivery Model\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"Attributes\":{\"vmx3_core_module\":\"${VMCOREFLOWMODULE}\",\"vmx3_task_flow\":\"${VMTASKFLOW}\",\"vmx3_test_agent\":\"${VMTESTAGENTID}\",\"vmx3_test_queue\":\"${VMTESTQUEUENAME}\"},\"TargetContact\":\"Current\"},\"Identifier\":\"Set all of the test attributes\",\"Type\":\"UpdateContactAttributes\",\"Transitions\":{\"NextAction\":\"Main test flow greeting\",\"Errors\":[{\"NextAction\":\"Main test flow greeting\",\"ErrorType\":\"NoMatchingError\"}]}}]}"
-        - VMTESTAGENTID: !Ref VMTestAgentId
+        - "{\"Version\":\"2019-10-30\",\"StartAction\":\"Turn on flow logging\",\"Metadata\":{\"entryPointPosition\":{\"x\":-520,\"y\":-42.4},\"ActionMetadata\":{\"Initialization greeting\":{\"position\":{\"x\":880,\"y\":271.2},\"isFriendlyName\":true},\"Set remaining required attributes for VMX3\":{\"position\":{\"x\":1143.2,\"y\":273.6},\"isFriendlyName\":true,\"parameters\":{\"Attributes\":{\"vmx3_from\":{\"useDynamic\":true},\"vmx3_queue_arn\":{\"useDynamic\":true}}},\"dynamicParams\":[\"vmx3_from\",\"vmx3_queue_arn\"]},\"Invoke the core VMX3 module\":{\"position\":{\"x\":1403.2,\"y\":272.8},\"isFriendlyName\":true,\"parameters\":{\"FlowModuleId\":{\"useDynamic\":true}},\"useDynamic\":true},\"Set agent queue\":{\"position\":{\"x\":343.2,\"y\":144.8},\"isFriendlyName\":true,\"parameters\":{\"AgentId\":{\"useDynamic\":true}},\"useDynamic\":true},\"Set standard queue\":{\"position\":{\"x\":636,\"y\":270.4},\"isFriendlyName\":true,\"parameters\":{\"QueueId\":{\"useDynamic\":true}},\"useDynamic\":true},\"Error message\":{\"position\":{\"x\":352.8,\"y\":556.8},\"isFriendlyName\":true},\"End Test\":{\"position\":{\"x\":357.6,\"y\":760.8},\"isFriendlyName\":true},\"Set task delivery mode\":{\"position\":{\"x\":-209.6,\"y\":220},\"isFriendlyName\":true,\"dynamicParams\":[]},\"Nothing selected\":{\"position\":{\"x\":-252,\"y\":936.8},\"isFriendlyName\":true},\"Set email delivery mode\":{\"position\":{\"x\":-211.2,\"y\":703.2},\"isFriendlyName\":true,\"dynamicParams\":[]},\"Set the destination type\":{\"position\":{\"x\":76.8,\"y\":351.2},\"isFriendlyName\":true,\"conditionMetadata\":[{\"id\":\"a22686e6-4dee-43e4-88ac-f64de1371043\",\"value\":\"1\"},{\"id\":\"d4bce9cc-8a22-4628-8270-5980c9f8dfeb\",\"value\":\"2\"}]},\"Select Delivery Model\":{\"position\":{\"x\":-539.2,\"y\":300},\"isFriendlyName\":true,\"conditionMetadata\":[{\"id\":\"286a13d5-149e-4400-888a-45bea27058e1\",\"value\":\"1\"},{\"id\":\"57507af9-37dd-4e56-b5c0-9d107de28f93\",\"value\":\"2\"},{\"id\":\"00f31fde-adc1-4fe6-80a7-e017db31ebd6\",\"value\":\"3\"}]},\"Set guided task delivery mode\":{\"position\":{\"x\":-198.4,\"y\":434.4},\"isFriendlyName\":true,\"dynamicParams\":[]},\"Turn on flow logging\":{\"position\":{\"x\":-398.4,\"y\":-39.2},\"isFriendlyName\":true},\"Main test flow greeting\":{\"position\":{\"x\":81.6,\"y\":-40.8},\"isFriendlyName\":true},\"Set all of the test attributes\":{\"position\":{\"x\":-160.8,\"y\":-41.6},\"isFriendlyName\":true,\"dynamicParams\":[]}},\"Annotations\":[]},\"Actions\":[{\"Parameters\":{\"Text\":\"Connecting to the voicemail flow.\"},\"Identifier\":\"Initialization greeting\",\"Type\":\"MessageParticipant\",\"Transitions\":{\"NextAction\":\"Set remaining required attributes for VMX3\",\"Errors\":[{\"NextAction\":\"Set remaining required attributes for VMX3\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"Attributes\":{\"vmx3_from\":\"$.CustomerEndpoint.Address\",\"vmx3_lang\":\"en-US\",\"vmx3_queue_arn\":\"$.Queue.ARN\"},\"TargetContact\":\"Current\"},\"Identifier\":\"Set remaining required attributes for VMX3\",\"Type\":\"UpdateContactAttributes\",\"Transitions\":{\"NextAction\":\"Invoke the core VMX3 module\",\"Errors\":[{\"NextAction\":\"Invoke the core VMX3 module\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"FlowModuleId\":\"$.Attributes.vmx3_core_module\"},\"Identifier\":\"Invoke the core VMX3 module\",\"Type\":\"InvokeFlowModule\",\"Transitions\":{\"NextAction\":\"Error message\",\"Errors\":[{\"NextAction\":\"Error message\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"AgentId\":\"$.Attributes.vmx3_test_agent\"},\"Identifier\":\"Set agent queue\",\"Type\":\"UpdateContactTargetQueue\",\"Transitions\":{\"NextAction\":\"Initialization greeting\",\"Errors\":[{\"NextAction\":\"Error message\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"QueueId\":\"$.Attributes.vmx3_test_queue\"},\"Identifier\":\"Set standard queue\",\"Type\":\"UpdateContactTargetQueue\",\"Transitions\":{\"NextAction\":\"Initialization greeting\",\"Errors\":[{\"NextAction\":\"Error message\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"Text\":\"We have encountered a system error. Please check flow logs to determine the issue.\"},\"Identifier\":\"Error message\",\"Type\":\"MessageParticipant\",\"Transitions\":{\"NextAction\":\"End Test\",\"Errors\":[{\"NextAction\":\"End Test\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{},\"Identifier\":\"End Test\",\"Type\":\"DisconnectParticipant\",\"Transitions\":{}},{\"Parameters\":{\"Attributes\":{\"vmx3_mode\":\"task\"},\"TargetContact\":\"Current\"},\"Identifier\":\"Set task delivery mode\",\"Type\":\"UpdateContactAttributes\",\"Transitions\":{\"NextAction\":\"Set the destination type\",\"Errors\":[{\"NextAction\":\"Set the destination type\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"Text\":\"No option selected. Ending test flow.\"},\"Identifier\":\"Nothing selected\",\"Type\":\"MessageParticipant\",\"Transitions\":{\"NextAction\":\"End Test\",\"Errors\":[{\"NextAction\":\"End Test\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"Attributes\":{\"vmx3_mode\":\"email\"},\"TargetContact\":\"Current\"},\"Identifier\":\"Set email delivery mode\",\"Type\":\"UpdateContactAttributes\",\"Transitions\":{\"NextAction\":\"Set the destination type\",\"Errors\":[{\"NextAction\":\"Set the destination type\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"StoreInput\":\"False\",\"InputTimeLimitSeconds\":\"5\",\"Text\":\"Press 1 to test delivery of voicemail to an agent's personal queue. Press 2 to test delivery to a standard queue.\"},\"Identifier\":\"Set the destination type\",\"Type\":\"GetParticipantInput\",\"Transitions\":{\"NextAction\":\"Nothing selected\",\"Conditions\":[{\"NextAction\":\"Set agent queue\",\"Condition\":{\"Operator\":\"Equals\",\"Operands\":[\"1\"]}},{\"NextAction\":\"Set standard queue\",\"Condition\":{\"Operator\":\"Equals\",\"Operands\":[\"2\"]}}],\"Errors\":[{\"NextAction\":\"Nothing selected\",\"ErrorType\":\"InputTimeLimitExceeded\"},{\"NextAction\":\"Nothing selected\",\"ErrorType\":\"NoMatchingCondition\"},{\"NextAction\":\"Nothing selected\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"StoreInput\":\"False\",\"InputTimeLimitSeconds\":\"5\",\"Text\":\"Press 1 to test task delivery, press 2 to test guided task delivery, or press 3 to test email delivery.\"},\"Identifier\":\"Select Delivery Model\",\"Type\":\"GetParticipantInput\",\"Transitions\":{\"NextAction\":\"Nothing selected\",\"Conditions\":[{\"NextAction\":\"Set task delivery mode\",\"Condition\":{\"Operator\":\"Equals\",\"Operands\":[\"1\"]}},{\"NextAction\":\"Set guided task delivery mode\",\"Condition\":{\"Operator\":\"Equals\",\"Operands\":[\"2\"]}},{\"NextAction\":\"Set email delivery mode\",\"Condition\":{\"Operator\":\"Equals\",\"Operands\":[\"3\"]}}],\"Errors\":[{\"NextAction\":\"Nothing selected\",\"ErrorType\":\"InputTimeLimitExceeded\"},{\"NextAction\":\"Nothing selected\",\"ErrorType\":\"NoMatchingCondition\"},{\"NextAction\":\"Nothing selected\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"Attributes\":{\"vmx3_mode\":\"guided_task\"},\"TargetContact\":\"Current\"},\"Identifier\":\"Set guided task delivery mode\",\"Type\":\"UpdateContactAttributes\",\"Transitions\":{\"NextAction\":\"Set the destination type\",\"Errors\":[{\"NextAction\":\"Set the destination type\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"FlowLoggingBehavior\":\"Enabled\"},\"Identifier\":\"Turn on flow logging\",\"Type\":\"UpdateFlowLoggingBehavior\",\"Transitions\":{\"NextAction\":\"Set all of the test attributes\"}},{\"Parameters\":{\"Text\":\"This is the voicemail express test flow. It allows you to quickly validate the deployment. \"},\"Identifier\":\"Main test flow greeting\",\"Type\":\"MessageParticipant\",\"Transitions\":{\"NextAction\":\"Select Delivery Model\",\"Errors\":[{\"NextAction\":\"Select Delivery Model\",\"ErrorType\":\"NoMatchingError\"}]}},{\"Parameters\":{\"Attributes\":{\"vmx3_core_module\":\"${VMCOREFLOWMODULE}\",\"vmx3_task_flow\":\"${VMTASKFLOW}\",\"vmx3_test_agent\":\"${VMTESTAGENT}\",\"vmx3_test_queue\":\"${VMTESTQUEUENAME}\",\"vmx3_guided_task_flow\":\"${VMGUIDEDTASKFLOW}\"},\"TargetContact\":\"Current\"},\"Identifier\":\"Set all of the test attributes\",\"Type\":\"UpdateContactAttributes\",\"Transitions\":{\"NextAction\":\"Main test flow greeting\",\"Errors\":[{\"NextAction\":\"Main test flow greeting\",\"ErrorType\":\"NoMatchingError\"}]}}]}"
+        - VMTESTAGENT: !Ref VMTestAgentId
           VMTESTQUEUENAME: !Ref VMTestQueueARN
           VMTASKFLOW: 
             !If
               - ConnectTasksEnabled
               - !Select [1, !Split ["contact-flow/", !Ref VMXExampleTaskFlow]]
+              - EXAMPLE
+          VMGUIDEDTASKFLOW: 
+            !If
+              - ConnectGuidedTasksEnabled
+              - !Select [1, !Split ["contact-flow/", !Ref VMXDefaultGuidedTaskFlow]]
               - EXAMPLE
           VMCOREFLOWMODULE: !Select [1, !Split ["flow-module/", !Ref VMXCoreFlowModule]]
       Description: Basic test flow to validate the Voicemail Express Deployment
@@ -75,7 +205,7 @@ Resources:
       Name:
         !Join
           - ''
-          - - 'VMX3-AWSTestFlow-'
+          - - 'VMX3_AWS_Test_Flow_'
             - !Ref ConnectInstanceAlias
       State: ACTIVE
       Type: CONTACT_FLOW
@@ -85,3 +215,11 @@ Outputs:
       Description: ID of the tasks sample contact flow
       Condition: ConnectTasksEnabled
       Value: !Select [1, !Split ["contact-flow/", !Ref VMXExampleTaskFlow]]
+    VMXExampleGuidedTaskFlowID:
+      Description: ID of the tasks sample guided task contact flow
+      Condition: ConnectGuidedTasksEnabled
+      Value: !Select [1, !Split ["contact-flow/", !Ref VMXDefaultGuidedTaskFlow]]
+    VMXGuidedFlowPresignerArn:
+      Description: ARN of the Guided Flow presigner function
+      Condition: ConnectGuidedTasksEnabled
+      Value: !GetAtt VMXGuidedFlowPresigner.Arn

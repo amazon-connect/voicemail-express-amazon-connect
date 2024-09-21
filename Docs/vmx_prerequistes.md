@@ -2,8 +2,8 @@
 Before deploying the Voicemail Express, you will need to complete a few prerequisites. These will ensure that your Amazon Connect instance is ready for Voicemail Express. These **must be completed** prior to the deployment and use of Voicemail Express.
 
 ## Delivery mode specific prerequisites
-### Setup steps for Amazon Connect Task delivery
-For Amazon Connect Task delivery, you simply need to have the following configured for your Amazon Connect instance:
+### Setup steps for Amazon Connect Task or Guided Task delivery
+For Amazon Connect Task or Guided Task delivery, you simply need to have the following configured for your Amazon Connect instance:
 -  [Contact records streaming via Amazon Kinesis Data Stream](https://docs.aws.amazon.com/connect/latest/adminguide/data-streaming.html) (Amazon Kinesis Data Firehose is not supported)
 -  [Live media streaming](https://docs.aws.amazon.com/connect/latest/adminguide/customer-voice-streams.html) must be enabled and the retention period needs to be set for at least 1 hour. Longer is not required.
 -  Routing profiles have [Tasks enabled in the Channel Settings](https://docs.aws.amazon.com/connect/latest/adminguide/routing-profiles.html), and for the appropriate queues
@@ -19,7 +19,7 @@ For email delivery, Voicemail Express uses SES. If you have not already configur
    -  You must use verified identities/domains, or the emails will not be delivered.
 
 #### Voicemail to agent emails
-This solution is designed to use the agent's email address, configured in Amazon Connect, as the delivery email address. If you wish to use a different email address, the packager function will need to be modified to account for that. 
+This solution is designed to use the agent's email address, configured in Amazon Connect, as the delivery email address. When deploying, you can select from If you wish to use a different email address, the packager function will need to be modified to account for that. 
 
 #### Voicemail to queues
 For queues, the solution is designed to extract the email address from the queue tags. This allows you to set the address by queue. If no address is specified, the solution will used the provided default address.

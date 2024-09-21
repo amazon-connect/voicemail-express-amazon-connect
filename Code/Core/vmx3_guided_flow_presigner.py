@@ -18,70 +18,81 @@ current_version = '2024.09.01'
 
 # Import the necessary modules for this function
 import json
-import os
 import boto3
 import logging
+from botocore.client import Config
+import base64
+import os
 
 # Establish logging configuration
 logger = logging.getLogger()
 
 def lambda_handler(event, context):
+    
     # Debug lines for troubleshooting
     logger.debug('Code Version: ' + current_version)
     logger.debug('VMX3 Package Version: ' + os.environ['package_version'])
     logger.debug(event)
-    
-    # Establish needed clients and resources
+
+    # Establish an empty response
+    response = {}
+
+    # Set the default result to success
+    response.update({'result':'success'})
+
+    # Configure the environment for the URL generation and initialize s3 client
     try:
-        s3_client = boto3.client('s3')
-        logger.debug('********** Clients initialized **********')
-    
+        # Set the region to match the recording location
+        use_region = os.environ['aws_region']
+        logger.debug('Using region: ' + use_region)
+
+        # Set the sig version and config options
+        my_config = Config(
+            region_name = use_region,
+            signature_version = 's3v4',
+            retries = {
+                'max_attempts': 10,
+                'mode': 'standard'
+            }
+        )
+        logger.debug(my_config)
+
+        s3_client = boto3.client(
+            's3',
+            endpoint_url = 'https://s3.' + use_region + '.amazonaws.com',
+            config=my_config
+        )
+
+        logger.debug('********** S3 client initialized with localiation and parameters **********')
+
     except Exception as e:
-        logger.error('********** VMX Initialization Error: Could not establish needed clients **********')
+        logger.error('********** S3 client failed to initialize **********')
         logger.error(e)
-
-        return {'status':'complete','result':'ERROR','reason':'Failed to Initialize clients'}
-    
-    # Extract the needed content
-    try:
-        original_transcript_key = event['detail']['TranscriptionJobName']
-        transcript_key = original_transcript_key[5:]
-        transcript_job = transcript_key.replace('.json','')
-        contact_id = transcript_job.split('_',1)[0]
-        transcript_bucket = os.environ['s3_transcripts_bucket']
-        aws_account = event['account']
-
-        logger.debug('********** Successfully extracted data **********')
-
-    except Exception as e:
-        logger.error('********** Could not extract required data **********')
-        logger.error(e)
-
-        return {'status':'complete','result':'ERROR','reason':'Failed to extract data'}
-    
-    # Establish the default failure message
-    message_content = {
-        'jobName':transcript_job,
-        'accountId':aws_account,
-        'status':'COMPLETED',
-        'results':{
-            'transcripts':[
-                {
-                    'transcript':'Transcription failed. Please refer to the recording link below, and/or expand the "Show all task information" section for details about the contact.'
-                }
-            ]
-        }
-    }
-    
-    # Write the error message to S3, mimicking the normal transcription process.
-    try:
-        response = s3_client.put_object(Body=json.dumps(message_content), Bucket=transcript_bucket, Key=original_transcript_key)
-        logger.info('Voicemail with contact id ' + contact_id + ' could not be transcribed.')
+        response.update({'status':'complete','result':'ERROR','reason':'s3 client init failed'})
 
         return response
 
-    except Exception as e:
-        logger.error('********** Could not write message **********')
-        logger.error(e)
+    # Generate the presigned URL and return
+    try:
+        use_bucket = os.environ['s3_recordings_bucket']
+        logger.debug(use_bucket)
+        vm_key = event['Details']['ContactData']['Attributes']['contact_id'] + '.wav'
+        logger.debug(vm_key)
+        
+        presigned_url = s3_client.generate_presigned_url('get_object',
+            Params = {'Bucket': use_bucket,
+                    'Key': vm_key},
+            ExpiresIn = 600
+        )
 
-        return {'status':'complete','result':'ERROR','reason':'Failed to write event'}
+        logger.debug('********** Presigned URL Generated successfully **********')
+        logger.debug('Presigned URL: ' + presigned_url)
+        response.update({'presigned_url': presigned_url})
+
+    except Exception as e:
+        logger.error('********** Presigned URL Failed to generate **********')
+        logger.error(e)
+        response.update({'status':'complete','result':'ERROR','reason':'presigned url generation failed'})
+        return response
+
+    return response

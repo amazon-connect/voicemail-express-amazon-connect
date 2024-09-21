@@ -14,9 +14,10 @@ When new versions of Voicemail Express are release, you can easily upgrade to th
 1.  Select the option to **Replace existing template**, then choose **Upload a template file**.
 1.  Select **Choose file**.
 1.  Navigate to the **vmx3.yaml** file that you downloaded previously and choose **Open**.
-1.  Wait a moment for the S3 URL to update, then find the parameter field labeled **(TEST USE ONLY) What is version you wish to deploy?**.
+1.  Wait a moment for the S3 URL to update, then find the parameter field labeled **(ADVANCED USE ONLY) What is version you wish to deploy?**.
 1.  Change that value to the latest version available. You can find the latest version at the end of the [README](https://github.com/amazon-connect/voicemail-express-amazon-connect) page.
-1.  Once the parameter is changed, choose **Next**
+1.  There may have been additional fields and changes. Please validate/update all other fields as well.
+1.  Once the parameters are filled out, choose **Next**
 1. 	Scroll to the bottom and select **Next**
 1. 	Scroll to the bottom, select the boxes to **acknowledge that IAM resources will be created**
 1.  Select **Submit**

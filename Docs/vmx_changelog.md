@@ -1,4 +1,10 @@
 # Voicemail Express 3 Changelog
+## 2024.09.01
+-  Added guided task option, visualizing a player, and obfuscating short lived URL
+-  IAM Roles and policies by function instead of one central role/policy
+-  Updated Email process to allow users to select the User field which contains the agent email
+-  Fixed an issue with email templates that prevented dynamic template selection
+
 ## 2024.08.01
 -  Rewrote KVStoS3 function in Python, completing conversion of code to Python 3.12
 -  Switched to the GetMediaForFragmentList API for Kinesis Video Streams Archived Media to extract the audio from KVS.

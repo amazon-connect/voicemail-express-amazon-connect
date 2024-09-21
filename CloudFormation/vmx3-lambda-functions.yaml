@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: Deploys the Voicemail Express Lambda functions.
+Description: Deploys the Voicemail Express Lambda functions. Updated for 2024.09.01.
 
 Parameters:
   EXPTemplateVersion:
@@ -10,6 +10,8 @@ Parameters:
   ConnectInstanceAlias:
     Type: String
   EnableVMToConnectTask:
+    Type: String
+  EnableVMToConnectGuidedTask:
     Type: String
   EnableVMToEmail:
     Type: String
@@ -31,15 +33,39 @@ Parameters:
     Type: String
   VMXDefaultTaskFlow:
     Type: String
+  VMXDefaultGuidedTaskFlow:
+    Type: String
   VMXSecrets:
-    Type: String
-  VMXCoreRoleArn:
-    Type: String
-  VMXCoreRole:
     Type: String
   VMXS3RecordingsBucket:
     Type: String
   VMXS3TranscriptsBucket:
+    Type: String
+  VMAgentAddressKey:
+    Type: String
+  VMXKVStoS3RoleArn:
+    Type: String
+  VMXKVStoS3Role:
+    Type: String
+  VMXPackagerRoleArn:
+    Type: String
+  VMXPackagerRole:
+    Type: String
+  VMXPresignerRoleArn:
+    Type: String
+  VMXPresignerRole:
+    Type: String
+  VMXTranscriberRoleArn:
+    Type: String
+  VMXTranscriberRole:
+    Type: String
+  VMXTranscriberErrorRoleArn:
+    Type: String
+  VMXTranscriberErrorRole:
+    Type: String
+  TaskRecordingLinksExpireInXDays:
+    Type: String
+  EmailRecordingLinksExpireInXDays:
     Type: String
 
 Mappings:
@@ -67,19 +93,35 @@ Mappings:
   VMModes:
     AmazonConnectTask:
       mode: task
+    AmazonConnectGuidedTask:
+      mode: guided_task
     AmazonSimpleEmailService:
       mode: email
 
 Conditions:
-  ConnectTasksEnabled: !Equals [!Ref EnableVMToConnectTask, yes]
-  AWSEmailEnabled: !Equals [!Ref EnableVMToEmail, yes]
+  ConnectTasksEnabled: !Equals 
+    - !Ref EnableVMToConnectTask
+    - 'yes'
+  ConnectGuidedTasksEnabled: !Equals
+    - !Ref EnableVMToConnectGuidedTask
+    - 'yes'
+  AWSEmailEnabled: !Equals
+    - !Ref EnableVMToEmail
+    - 'yes'
+  NonGuidedOptions: !Or
+    - !Equals
+      - !Ref EnableVMToConnectTask
+      - 'yes'
+    - !Equals
+      - !Ref EnableVMToEmail
+      - 'yes'
 
 Resources:
   VMXPythonLayer:
     Type: AWS::Lambda::LayerVersion
     Properties:
       CompatibleRuntimes:
-        - python3.11
+        - python3.12
       Content:
         S3Bucket:
           !Join
@@ -93,7 +135,7 @@ Resources:
           - - 'vmx3/'
             - !Ref EXPTemplateVersion
             - /zip/vmx3_common_python.zip
-      Description: Provides dependencies code and functions for Python Lambda functions that augment the Service Cloud Voice offering from Salesforce
+      Description: Provides dependencies code and functions for AWS Lambda functions that power Voicemail Express.
       LayerName: !Join
         - ''
         - - 'common_python_layer_'
@@ -102,6 +144,7 @@ Resources:
 
   VMXPresigner:
     Type: AWS::Lambda::Function
+    Condition: NonGuidedOptions
     Properties:
       Code:
         S3Bucket:
@@ -116,13 +159,15 @@ Resources:
           - - 'vmx3/'
             - !Ref EXPTemplateVersion
             - /zip/vmx3_presigner.py.zip
-      Description: Generates the presigned URL that provides authenticated access to the voicemail recording in S3
+      Description: Generates the presigned URL that provides authenticated access to the voicemail recording in S3. Used for Task and EMail deliivery modes.
       Environment:
         Variables:
           aws_region:
             Ref: AWSRegion
-          s3_obj_lifecycle:
-            Ref: RecordingsExpireInXDays
+          tasks_url_expire:
+            Ref: TaskRecordingLinksExpireInXDays
+          email_url_expire:
+            Ref: EmailRecordingLinksExpireInXDays
           secrets_key_id:
             Ref: VMXSecrets
           package_version:
@@ -138,7 +183,7 @@ Resources:
           Ref: LambdaLoggingLevel
         LogFormat: JSON
         SystemLogLevel: INFO
-      Role: !Ref VMXCoreRoleArn
+      Role: !Ref VMXPresignerRoleArn
       Runtime: python3.12
       Timeout: 30
 
@@ -166,9 +211,11 @@ Resources:
           s3_transcripts_bucket:
             Ref: VMXS3TranscriptsBucket
           presigner_function_arn:
-            Ref: VMXPresigner
+            !If [NonGuidedOptions, !Ref VMXPresigner, 'AWS::NoValue']
           default_task_flow:
             !If [ConnectTasksEnabled, !Ref VMXDefaultTaskFlow, 'AWS::NoValue']
+          default_guided_task_flow:
+            !If [ConnectGuidedTasksEnabled, !Ref VMXDefaultGuidedTaskFlow, 'AWS::NoValue']
           package_version:
             Ref: EXPTemplateVersion
           TZ:
@@ -183,6 +230,8 @@ Resources:
             !If [AWSEmailEnabled, !Ref VMEmailDefaultAgentTemplate, 'AWS::NoValue']
           default_queue_email_template:
             !If [AWSEmailEnabled, !Ref VMEmailDefaultQueueTemplate, 'AWS::NoValue']
+          agent_email_key:
+            !If [AWSEmailEnabled, !Ref VMAgentAddressKey, 'Email']
       FunctionName:
         !Join
             - ''
@@ -194,7 +243,7 @@ Resources:
           Ref: LambdaLoggingLevel
         LogFormat: JSON
         SystemLogLevel: INFO
-      Role: !Ref VMXCoreRoleArn
+      Role: !Ref VMXPackagerRoleArn
       Layers: [!Ref VMXPythonLayer]
       Runtime: python3.12
       Timeout: 900
@@ -230,7 +279,7 @@ Resources:
             - - 'VMX3-Transcriber-'
               - !Ref ConnectInstanceAlias
       Handler: vmx3_transcriber.lambda_handler
-      Role: !Ref VMXCoreRoleArn
+      Role: !Ref VMXTranscriberRoleArn
       Runtime: python3.12
       LoggingConfig:
         ApplicationLogLevel:
@@ -270,7 +319,7 @@ Resources:
             - - 'VMX3-KVStoS3-'
               - !Ref ConnectInstanceAlias
       Handler: vmx3_kvs_to_s3.lambda_handler
-      Role: !Ref VMXCoreRoleArn
+      Role: !Ref VMXKVStoS3RoleArn
       Layers: [!Ref VMXPythonLayer]
       Runtime: python3.12
       LoggingConfig:
@@ -311,7 +360,7 @@ Resources:
             - - 'VMX3-TranscribeErrorHandler-'
               - !Ref ConnectInstanceAlias
       Handler: vmx3_transcription_error_handler.lambda_handler
-      Role: !Ref VMXCoreRoleArn
+      Role: !Ref VMXTranscriberErrorRoleArn
       Runtime: python3.12
       LoggingConfig:
         ApplicationLogLevel:
@@ -319,45 +368,6 @@ Resources:
         LogFormat: JSON
         SystemLogLevel: INFO
       Timeout: 30
-
-  VMXAddOnPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    DependsOn:
-        - VMXPresigner
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Action:
-              - 'lambda:InvokeFunction'
-            Resource:
-              - !GetAtt VMXPresigner.Arn
-          - Effect: Allow
-            Action:
-              - 'transcribe:StartTranscriptionJob'
-              - 'transcribe:DeleteTranscriptionJob'
-              - 'connect:DescribeUser'
-              - 'connect:UpdateContactAttributes'
-              - 'connect:GetContactAttributes'
-              - 'connect:DescribeQueue'
-              - 'connect:StartTaskContact'
-            Resource:
-              - '*'
-          - Effect: Allow
-            Action:
-              - 'secretsmanager:GetSecretValue'
-              - 'secretsmanager:DescribeSecret'
-              - 'secretsmanager:ListSecretVersionIds'
-            Resource:
-              - !Ref VMXSecrets
-      ManagedPolicyName:
-        !Join
-          - ''
-          - - 'VMXCorePolicy-'
-            - !Ref ConnectInstanceAlias
-      Roles:
-        - !Ref VMXCoreRole
 
 Outputs:
   VMXPackagerArn:
@@ -372,3 +382,7 @@ Outputs:
   VMXTranscribeErrorArn:
     Description: ARN of the transcribe error handler function
     Value: !GetAtt VMXTranscribeErrorHandler.Arn
+  VMXPresignerArn:
+    Description: ARN of the presigner function
+    Condition: NonGuidedOptions
+    Value: !GetAtt VMXPresigner.Arn

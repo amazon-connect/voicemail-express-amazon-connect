@@ -21,7 +21,7 @@ Voicemails are captured in the Amazon Connect contact flow, processed post-call,
     1.  Retrieves the transcript file from S3
     1.  Uses the data in the transcript file identify the contact and find the recording
     1.  Retrieves the metadata from the recording file
-    1.  Invokes the VMX3-Presigner function to generate a presigned URL for the recording
+    1.  Invokes the VMX3-Presigner function to generate a presigned URL for the recording (for standard Task and Email modes only)
     1.  Determines queue/agent information, destination, etc
     1.  Invokes the sub-function for the delivery mode
     1.  Once delivery is successful, it deletes the existing transcription job
@@ -37,7 +37,7 @@ In order for the voicemail system to work, contacts must have certain contact at
     -  Example: 'vmx3_queue_arn':'arn:aws:connect:us-east-1:YOURACCOUNTNUMBER:instance/YOURINSTANCEID/queue/YOURQUEUEID'
 -  **vmx3_lang (Required)**: (Language code) the language code that Amazon Transcribe should use when transcribing the call. The list of supported languages and their language codes can be found in the [Amazon Transcribe Developer Guide](https://docs.aws.amazon.com/transcribe/latest/dg/supported-languages.html). **DEFAULT: en-US**
     -  Example: 'vmx3_lang':'en-US'
--  **vmx3_mode (Required)**: (task) which delivery mode should be used for this voicemail. In this version of Voicemail Express, all voicemails are delivered as Amazon Connect Tasks. If nothing is provided, the voicemail will be delivered via the default mode selected during implementation. **DEFAULT: task**
+-  **vmx3_mode (Required)**: (task) which delivery mode should be used for this voicemail. In this version of Voicemail Express, all voicemails are delivered as Amazon Connect Tasks. If nothing is provided, the voicemail will be delivered via the default mode selected during implementation. Options: `email, task, guided_task` **DEFAULT: guided_task**
     -  Example: 'vmx3_mode':'task'
 
 ### When to set the voicemail contact attributes
