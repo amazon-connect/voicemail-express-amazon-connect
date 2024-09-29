@@ -13,6 +13,7 @@ Metadata:
           - ConnectInstanceARN
           - VMXKVSStreamPrefix
           - ConnectCTRStreamARN
+          - ConnectCTRStreamKMSKeyARN
           - LambdaLoggingLevel
       - Label:
           default: 2. Voicemail Express AWS Delivery Modes
@@ -58,8 +59,9 @@ Metadata:
       AWSRegion:
         default: Which AWS region is your Amazon Connect Instance deployed to?
       ConnectCTRStreamARN:
-        default: What is the ARN for the Kinesis Data Stream that is configured for
-          Contact Record streaming.
+        default: What is the ARN for the Kinesis Data Stream that is configured for Contact Record streaming.
+      ConnectCTRStreamKMSKeyARN:
+        default: Enter the ARN of the customer-managed KMS Key for Kinesis Data Stream encryption. Leave empty if using AWS-managed KMS Key or if encryption is Disabled.
       ConnectInstanceAlias:
         default: What is your Amazon Connect instance alias?
       ConnectInstanceARN:
@@ -133,6 +135,11 @@ Parameters:
     Description: Provide the ARN for the Kinesis Data Stream that receives your
       contact records. This solution is only designed for Amazon Kinesis Data
       Streams, not Kinesis Data Firehose.
+  ConnectCTRStreamKMSKeyARN:
+    Type: String
+    Default: Looks like - arn:aws:kms:REGION:ACCOUNT:key/REPLACEME
+    Description: Provide the ARN for the KMS Key configured on Kinesis Data Stream that receives your
+      contact records. Not required if using AWS-managed KMS Key or if encryption is disabled.
   ConnectInstanceAlias:
     Type: String
     Default: REPLACEME
@@ -505,6 +512,7 @@ Resources:
         VMXS3TranscriptsBucketArn: !GetAtt VMXCoreStack.Outputs.VMXS3TranscriptsBucketArn
         VMXKVSStreamPrefix: !Ref VMXKVSStreamPrefix
         ConnectCTRStreamARN: !Ref ConnectCTRStreamARN
+        ConnectCTRStreamKMSKeyARN: !Ref ConnectCTRStreamKMSKeyARN
         AWSRegion: !Ref AWSRegion
         VMXPresignerArn: !If
           - NonGuidedOptions
