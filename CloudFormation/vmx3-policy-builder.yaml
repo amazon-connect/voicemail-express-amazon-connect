@@ -29,6 +29,8 @@ Parameters:
     Type: String
   ConnectCTRStreamARN:
     Type: String
+  ConnectCTRStreamKMSKeyARN:
+    Type: String
   AWSRegion:
     Type: String
   VMXPresignerArn:
@@ -54,6 +56,7 @@ Conditions:
   ConnectGuidedTasksEnabled: !Equals
     - !Ref EnableVMToConnectGuidedTask
     - 'yes'
+  HasCTRStreamKMSKeyARN: !Not [!Equals [!Ref ConnectCTRStreamKMSKeyARN, '']]
 
 Resources:
   VMXGuidedFlowPresignerPolicy:
@@ -120,7 +123,15 @@ Resources:
               - 'kinesis:GetShardIterator'
               - 'kinesis:ListShards'
               - 'kinesis:ListStreams'
-            Resource: !Ref ConnectCTRStreamARN       
+            Resource: !Ref ConnectCTRStreamARN     
+          - !If 
+            - HasCTRStreamKMSKeyARN
+            - Effect: Allow
+              Action: 
+              - 'kms:Decrypt'
+              - 'kms:GenerateDataKey'
+              Resource: !Ref ConnectCTRStreamKMSKeyARN 
+            - !Ref AWS::NoValue
       ManagedPolicyName:
         !Join
           - ''
