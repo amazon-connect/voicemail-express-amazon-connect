@@ -12,6 +12,7 @@ Metadata:
           - ConnectInstanceAlias
           - ConnectInstanceARN
           - VMXKVSStreamPrefix
+          - VMXKVSStreamKMSKeyARN
           - ConnectCTRStreamARN
           - LambdaLoggingLevel
       - Label:
@@ -86,6 +87,8 @@ Metadata:
           minutes)
       VMXKVSStreamPrefix:
         default: What is the prefix for the Kinesis Video Streams (KVS) associated with this instance?
+      VMXKVSStreamKMSKeyARN:
+        default: What is the ARN (Amazon Resource Name) of the KMS key used for encrypting data in the Amazon Kinesis Video Streams (KVS) associated with this instance?
       LambdaLoggingLevel:
         default: For the included AWS Lambda functions, what should the default logging
           level be set to?
@@ -149,8 +152,14 @@ Parameters:
     Description: Not required and only used for development purposes.
   VMXKVSStreamPrefix:
     Type: String
-    Default: 'Looks like - PREFIX-connect-ALIAS-contact-'
-    Description: The full prefix for the KVS streams. You can find this in the Connect Console at Data Storage > Live media Streaming > Kinesis video stream prefix.
+    Default: Looks like - PREFIX-connect-ALIAS-contact-
+    Description: The full prefix for the KVS streams. You can find this in the
+      Connect Console at Data Storage > Live media Streaming > Kinesis video
+      stream prefix.
+  VMXKVSStreamKMSKeyARN:
+    Type: String
+    Default: Looks like - arn:aws:kms:REGION:ACCOUNT:key/REPLACEME
+    Description: The full ARN for the KMS key used for KVS streams. You can find this in the Connect Console at Data Storage > Live media Streaming > Encryption.
   EmailRecordingLinksExpireInXDays:
     Type: String
     Default: 1
@@ -504,6 +513,7 @@ Resources:
         VMXS3RecordingsBucketArn: !GetAtt VMXCoreStack.Outputs.VMXS3RecordingsBuckettArn
         VMXS3TranscriptsBucketArn: !GetAtt VMXCoreStack.Outputs.VMXS3TranscriptsBucketArn
         VMXKVSStreamPrefix: !Ref VMXKVSStreamPrefix
+        VMXKVSStreamKMSKeyARN: !Ref VMXKVSStreamKMSKeyARN
         ConnectCTRStreamARN: !Ref ConnectCTRStreamARN
         AWSRegion: !Ref AWSRegion
         VMXPresignerArn: !If

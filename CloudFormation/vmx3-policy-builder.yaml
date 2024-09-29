@@ -27,6 +27,8 @@ Parameters:
     Type: String
   VMXKVSStreamPrefix:
     Type: String
+  VMXKVSStreamKMSKeyARN:
+    Type: String
   ConnectCTRStreamARN:
     Type: String
   AWSRegion:
@@ -121,6 +123,11 @@ Resources:
               - 'kinesis:ListShards'
               - 'kinesis:ListStreams'
             Resource: !Ref ConnectCTRStreamARN       
+          - Effect: Allow
+            Action:
+              - 'kms:Decrypt'
+              - 'kms:GenerateDataKey'
+            Resource: !Ref VMXKVSStreamKMSKeyARN
       ManagedPolicyName:
         !Join
           - ''
