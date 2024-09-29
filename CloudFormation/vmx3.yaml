@@ -153,9 +153,7 @@ Parameters:
   VMXKVSStreamPrefix:
     Type: String
     Default: Looks like - PREFIX-connect-ALIAS-contact-
-    Description: The full prefix for the KVS streams. You can find this in the
-      Connect Console at Data Storage > Live media Streaming > Kinesis video
-      stream prefix.
+    Description: The full prefix for the KVS streams. You can find this in the Connect Console at Data Storage > Live media Streaming > Kinesis video stream prefix.
   VMXKVSStreamKMSKeyARN:
     Type: String
     Default: Looks like - arn:aws:kms:REGION:ACCOUNT:key/REPLACEME
