@@ -1,4 +1,8 @@
 # Voicemail Express 3 Changelog
+
+## 2024.10.24
+- Removed IAM user creation in preference of provided the appropriate policy to the presigner lambda
+
 ## 2024.09.01
 -  Added guided task option, visualizing a player, and obfuscating short lived URL
 -  IAM Roles and policies by function instead of one central role/policy
