@@ -40,19 +40,6 @@ def lambda_handler(event, context):
     # Set the default result to success
     response.update({'result':'success'})
 
-    # Retrieve credentials from AWS Secrets Manager
-    try:
-        use_keys = get_secret()
-        logger.debug('********** Successfully retrieved keys **********')
-
-    except Exception as e:
-        logger.error('********** Key retrieval failed **********')
-        logger.error(e)
-        
-        response.update({'status':'complete','result':'ERROR','reason':'key retrieval failed'})
-
-        return response
-
     # Configure the environment for the URL generation and initialize s3 client
     try:
         # Set the region to match the recording location
@@ -72,8 +59,8 @@ def lambda_handler(event, context):
         s3_client = boto3.client(
             's3',
             endpoint_url = 'https://s3.' + use_region + '.amazonaws.com',
-            aws_access_key_id = use_keys['vmx_iam_key_id'],
-            aws_secret_access_key = use_keys['vmx_iam_key_secret'],
+            # aws_access_key_id = use_keys['vmx_iam_key_id'],
+            # aws_secret_access_key = use_keys['vmx_iam_key_secret'],
             config=my_config
         )
 
@@ -117,57 +104,3 @@ def lambda_handler(event, context):
         response.update({'status':'complete','result':'ERROR','reason':'presigned url generation failed'})
 
         return response
-
-# Sub to retrieve the secrets from Secrets Manager
-def get_secret():
-    # Set response container
-    secret_response = {}
-
-    # Set secrets environment
-    try:
-        secret_name = os.environ['secrets_key_id']
-        region_name = os.environ['aws_region']
-        logger.debug('********** Secrets environment vars set **********')
-
-    except Exception as e:
-        logger.error('********** Secrets environment vars failed to set **********')
-        logger.error(e)
-        secret_response.update({'status':'complete','result':'ERROR','reason':'environment vars failed'})
-
-        return secret_response
-
-    # Create a Secrets Manager session
-    try:
-        session = boto3.session.Session()
-        client = session.client(
-            service_name='secretsmanager',
-            region_name=region_name
-        )
-
-        logger.debug('********* Secrets session initialized **********')
-
-    except Exception as e:
-        logger.error('********** Secrets session failed to initialize **********')
-        logger.error(e)
-        secret_response.update({'status':'complete','result':'ERROR','reason':'AWS Secrets Manager session failed'})
-
-        return secret_response
-
-    # Get the secrets
-    try:
-        get_secret_value_response = client.get_secret_value(
-            SecretId=secret_name
-        )
-        secret = get_secret_value_response['SecretString']
-        secret_response.update(json.loads(secret))
-
-        logger.debug('********** Successfully retrieved secrets **********')
-
-        return secret_response
-
-    except Exception as e:
-        logger.error('********** Failed to get secrets **********')
-        logger.error(e)
-        secret_response.update({'status':'complete','result':'ERROR','reason':'failed to get secrets'})
-
-        return secret_response

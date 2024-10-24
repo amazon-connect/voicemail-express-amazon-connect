@@ -127,6 +127,14 @@ Resources:
                 - lambda.amazonaws.com
             Action:
               - sts:AssumeRole
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+            Resource:
+              - !Join
+                - ''
+                - - !GetAtt VMXS3RecordingsBucket.Arn
+                  - /*
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
@@ -245,72 +253,6 @@ Resources:
         EventBridgeConfiguration:
           EventBridgeEnabled: true
 
-  VMXPresignerUserPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    DependsOn:
-      - VMXS3RecordingsBucket
-      - VMXS3TranscriptsBucket
-      - VMXPresignerRole
-    Condition: NonGuidedOptions
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Action:
-              - s3:GetObject
-            Resource:
-              - !Join
-                - ''
-                - - !GetAtt VMXS3RecordingsBucket.Arn
-                  - /*
-      ManagedPolicyName: !Join
-        - ''
-        - - VMX3_Presigner_User_Policy_
-          - !Ref ConnectInstanceAlias
-      Roles:
-        - !Ref VMXPresignerRole
-
-  VMXPresignerUser:
-    Type: AWS::IAM::User
-    DependsOn:
-      - VMXPresignerUserPolicy
-    Condition: NonGuidedOptions
-    Properties:
-      UserName: !Join
-        - ''
-        - - VMX3_Presigner_User_
-          - !Ref ConnectInstanceAlias
-      ManagedPolicyArns:
-        - !Ref VMXPresignerUserPolicy
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-
-  VMXUserKey:
-    Type: AWS::IAM::AccessKey
-    DependsOn:
-      - VMXPresignerUser
-    Condition: NonGuidedOptions
-    Properties:
-      Status: Active
-      UserName: !Ref VMXPresignerUser
-
-  VMXSecrets:
-    Type: AWS::SecretsManager::Secret
-    DependsOn:
-      - VMXPresignerUser
-      - VMXUserKey
-    Condition: NonGuidedOptions
-    Properties:
-      Name: !Join
-        - ''
-        - - VMX3_Access_Secrets_
-          - !Ref ConnectInstanceAlias
-      Description: Stores user credentials for the presigner function
-      SecretString: !Sub
-        - '{"vmx_iam_key_id":"${KeyID}","vmx_iam_key_secret":"${KeySecret}"}'
-        - KeyID: !Ref VMXUserKey
-          KeySecret: !GetAtt VMXUserKey.SecretAccessKey
-
 Outputs:
   VMXS3RecordingsBucket:
     Description: Voicemail Recording storage bucket name
@@ -324,10 +266,6 @@ Outputs:
   VMXS3TranscriptsBucketArn:
     Description: Voicemail Transcript storage bucket ARN
     Value: !GetAtt VMXS3TranscriptsBucket.Arn
-  VMXSecrets:
-    Description: Secrets ID
-    Condition: NonGuidedOptions
-    Value: !Ref VMXSecrets
   VMXGuidedFlowPresignerRole:
     Description: Guided flow presigner role name
     Condition: ConnectGuidedTasksEnabled
