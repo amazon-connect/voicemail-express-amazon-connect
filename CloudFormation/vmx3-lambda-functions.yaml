@@ -319,6 +319,7 @@ Resources:
             - - 'VMX3-KVStoS3-'
               - !Ref ConnectInstanceAlias
       Handler: vmx3_kvs_to_s3.lambda_handler
+      MemorySize: 512
       Role: !Ref VMXKVStoS3RoleArn
       Layers: [!Ref VMXPythonLayer]
       Runtime: python3.12

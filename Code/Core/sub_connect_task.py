@@ -44,6 +44,11 @@ def vmx3_to_connect_task(writer_payload):
         return {'status':'complete','result':'ERROR','reason':'Failed to Initialize clients'}
 
     logger.debug('Beginning Voicemail to Task')
+
+    # Make sure transcript fits in field and truncate if it does not.
+    transcript = writer_payload['json_attributes']['transcript_contents']
+    if len(transcript) > 4096:
+        transcript = transcript[:4092] + ' ...'
     
     # Check for a task flow to use, if not, use default
     if 'vmx3_task_flow' in writer_payload['json_attributes']:
@@ -79,7 +84,7 @@ def vmx3_to_connect_task(writer_payload):
                     'Type': 'URL'
                 }
             },
-            Description=writer_payload['json_attributes']['transcript_contents'],
+            Description=transcript,
             ClientToken=writer_payload['contact_id']
         )
         logger.debug('********** Task Created **********')

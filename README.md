@@ -3,11 +3,21 @@ Voicemail Express is designed to provide basic voicemail functionality to Amazon
 
 ![Voicemail Express Architecture](Docs/Img/VMX3.png)
 
-## What's new in VMX3 (2024.09.01)
--  **Guided Task Delivery Mode**: Improves agent experience for tasks by providing a visual player and transcript in an agent guide view. Obfuscates the presigned url, which is also has a reduced lifespan of minutes instead of days. 
--  **Security Enhancements**: Moved from one unified role to one role per function, with strict policies to limit blast radius of compromised roles. For Guided Task delivery, removes the IAM user requirement for presigned URLs. 
--  **Improved Recording Lifecycle**: Seperated the presigned URL lifecycle from the s3 object lifecycle. Allows for longer retention of recordings while still being able to have a more reasonable lifecycle policy. For example, creating a presigned URL good for only 1 day, but a lifecycle policy that moves recordings to Glacier after 180 days.
--  **Additional Fixes and Enhancements**: Added an option to indicate which user field holds the agent email for email delivery mode. Fixed an issue with custom template use. 
+## What's new in VMX3 (2024.12.31)
+-  **Security Enhancements**: 
+   -  Support for Customer-Managed Keys for S3 buckets
+   -  Support for Customer-Managed Keys for KVS stream
+   -  Support for bucket versioning
+   -  Support for delete protection
+-  **Performance Validation**:
+   -  Validated functionality for voicemails up to 5 minutes long
+-  **Example Flows**:
+   -  Sample flow demonstrating how to check stats ahead of time and offer voicemail before queueing contacts
+   -  Sample queue flow demonstrating how to cleanly do an uninterruptable voicemail while in a queue flow
+-  **Documentation Updates**: 
+   -  Documented changes needed to support voicemail messages >5 minutes
+-  **Fixes:**
+   -  Truncating voicemail transcripts longer than 4096 bytes (Field limit in tasks)
 
 ## How it works
 With Voicemail Express, customers can have the option to leave a voicemail for an individual agent or an Amazon Connect Queue. Once the voicemail is recorded, a series of processes take place in the following order:
@@ -55,14 +65,10 @@ The following items are currently planned for future releases. Changes to roadma
    -  [x] Security improvements
 
 -  **Sep-Dec 2024**
-   -  [ ] Additional security enhancements
+   -  [ ] Additional security enhancements (Allow customer KMS key, VPC option)
    -  [ ] Example flows
    -  [ ] Notification Option
    -  [ ] GenAI summary option
-   -  [ ] Lambda VPC Option
-   -  [ ] Optional delivery mode add-ins: Allows you to add additional delivery modes as desired. The next batch of delivery modes will be:
-      -  [ ] Salesforce Case
-      -  [ ] Salesforce custom objects
    -  [x] Reduce layer size for default deployments
    -  [ ] Reduce complexity and number of functions
    -  [ ] Support for GitHub sync
