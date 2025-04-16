@@ -159,6 +159,13 @@ Resources:
           - - 'vmx3/'
             - !Ref EXPTemplateVersion
             - /zip/vmx3_presigner.py.zip
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0a9827c5867b19a62
+        SubnetIds:
+          - subnet-033b0459fa025c31d
+          - subnet-093e08e298f7a654f
+          
       Description: Generates the presigned URL that provides authenticated access to the voicemail recording in S3. Used for Task and EMail deliivery modes.
       Environment:
         Variables:
