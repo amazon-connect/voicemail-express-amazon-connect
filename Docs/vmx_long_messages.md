@@ -3,10 +3,10 @@ Voicemail express has been validated at scale with messages up to 5 minutes long
 1.  How much memory the KVStoS3 Lambda function needs to process the message and
 1.  How much time it takes to do it
 
-For the default deployment, the KVStoS3 function is configured with 512 MB of memory and a 15 minute timeout. In our testing, a 6 minute message of constant audio takes roughly 180 MB of memory and ~20 seconds. Lambda function timeout should not be a concern here, as the function can comfortably handle nearly 4 hours of audio processing time. The issue is more around the memory assigned to the function. The default Lambda memory is 128 MB, which was insufficient for a 5 minute message, so it was moved up to 512 (the next pricing tier limit). At 512, it should be able to comfortably handle up to 15 minutes of audio, however this has not been validated at scale. 
+For the default deployment, the KVStoS3 function is configured with 512 MB of memory and a 15 minute timeout. In our testing, a 6 minute message of constant audio takes roughly 180 MB of memory and ~20 seconds. Lambda function timeout should not be a concern here, as the function can comfortably handle nearly 4 hours of audio processing time. The issue is more around the memory assigned to the function. The default Lambda memory is 128 MB, which was insufficient for a 5 minute message, so it was moved up to 512 (the next pricing tier limit). At 512, it should be able to comfortably handle up to 25 minutes of audio, however this has not been validated at scale. 
 
 ## How do I know if my function is running out of memory?
-If your voicemail never makes it past the KVStoS3 function, chech the Cloudwatch logs. You will likely see an entry similar to this:
+If your voicemail never makes it past the KVStoS3 function, check the Cloudwatch logs. You will likely see an entry similar to this:
 ```
 {
     "time": "2024-12-30T23:20:29.823Z",

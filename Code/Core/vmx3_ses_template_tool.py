@@ -1,7 +1,7 @@
-current_version = '2024.09.01'
+current_version = '2025.09.12'
 '''
 **********************************************************************************************************************
- *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
+ *  Copyright 2025 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
  *                                                                                                                    *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated      *
  *  documentation files (the "Software"), to deal in the Software without restriction, including without limitation   *
@@ -39,8 +39,7 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error('********** VMX Initialization Error: Could not establish needed clients **********')
         logger.error(e)
-
-        return {'status':'complete','result':'ERROR','reason':'Failed to Initialize clients'}
+        raise Exception
 
     if event['mode'] == 'create':
         # Creates the template using the provided values
@@ -61,8 +60,7 @@ def lambda_handler(event, context):
         except Exception as e:
             logger.error('Template creation failed')
             logger.error(e)
-
-            return 'Template creation failed'
+            raise Exception
 
     elif event['mode'] == 'get':
         try:
@@ -80,8 +78,7 @@ def lambda_handler(event, context):
         except Exception as e:
             logger.error('********** Template retrieval failed **********')
             logger.error(e)
-
-            return 'Template retrieval failed'
+            raise Exception
 
     elif event['mode'] == 'update':
         # Updates the template using the provided values
@@ -102,8 +99,7 @@ def lambda_handler(event, context):
         except Exception as e:
             logger.error('********** Template update failed **********')
             logger.error(e)
-
-            return 'Template update failed'
+            raise Exception
 
 
     elif event['mode'] == 'delete':
@@ -120,4 +116,4 @@ def lambda_handler(event, context):
         except Exception as e:
             logger.error('********** Template failed to delete **********')
             logger.error(e)
-            return 'Template delete failed'
+            raise Exception

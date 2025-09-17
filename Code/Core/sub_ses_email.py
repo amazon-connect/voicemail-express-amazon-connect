@@ -1,4 +1,4 @@
-current_version = '2024.09.01'
+current_version = '2025.09.12'
 '''
 **********************************************************************************************************************
  *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -40,8 +40,7 @@ def vmx3_to_ses_email(writer_payload):
     except Exception as e:
         logger.error('********** VMX Initialization Error: Could not establish needed clients **********')
         logger.error(e)
-
-        return {'status':'complete','result':'ERROR','reason':'Failed to Initialize clients'}
+        raise Exception
     
     logger.debug('Beginning Voicemail to email')
 
@@ -83,9 +82,12 @@ def vmx3_to_ses_email(writer_payload):
             vmx3_email_template = os.environ['default_queue_email_template']
 
     vmx3_email_data = json.dumps(writer_payload['json_attributes'])
+    if vmx3_email_data['vmx3_do_genai_summary'] != 'true':
+        vmx3_email_data.update({'vmx3_genai_summary':'GenAI summary not enabled for this contact.'})
+
 
     # Send the email
-    try:
+    try:    
 
         send_email = ses_client.send_email(
             FromEmailAddress=vmx3_email_from_address,
@@ -109,5 +111,4 @@ def vmx3_to_ses_email(writer_payload):
     except Exception as e:
         logger.error('********** Failed to send email **********')
         logger.error(e)
-
-        return 'fail'
+        raise Exception

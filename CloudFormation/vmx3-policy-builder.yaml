@@ -9,7 +9,7 @@ Parameters:
     Type: String
   VMXGuidedFlowPresignerRole:
     Type: String
-  VMXKVStoS3Role:
+  VMXRecordingProcessorRole:
     Type: String
   VMXPackagerRole:
     Type: String
@@ -25,7 +25,7 @@ Parameters:
     Type: String
   VMXS3TranscriptsBucketArn:
     Type: String
-  VMXKVSStreamPrefix:
+  ConnectRecordingsBucketArn:
     Type: String
   ConnectCTRStreamARN:
     Type: String
@@ -80,27 +80,12 @@ Resources:
       Roles:
         - !Ref VMXGuidedFlowPresignerRole
 
-  VMXKVStoS3Policy:
+  VMXRecordingProcessor:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Effect: Allow
-            Action:
-              - 'kinesisvideo:ListFragments'
-              - 'kinesisvideo:GetMediaForFragmentList'
-              - 'kinesisvideo:GetDataEndpoint'
-            Resource:
-              !Join
-                - ''
-                - - 'arn:aws:kinesisvideo:'
-                  - !Ref AWSRegion
-                  - ':'
-                  - !Ref AWS::AccountId
-                  - ':stream/'
-                  - !Ref VMXKVSStreamPrefix
-                  - '*'
           - Effect: Allow
             Action:
               - 's3:PutObject'
@@ -120,14 +105,22 @@ Resources:
               - 'kinesis:GetShardIterator'
               - 'kinesis:ListShards'
               - 'kinesis:ListStreams'
-            Resource: !Ref ConnectCTRStreamARN       
+            Resource: !Ref ConnectCTRStreamARN
+          - Effect: Allow
+            Action:
+              - 's3:GetObject'
+            Resource:
+              !Join
+                - ''
+                - - !Ref ConnectRecordingsBucketArn
+                  - '/*'
       ManagedPolicyName:
         !Join
           - ''
-          - - 'VMX_KVS_to_S3_Policy_'
+          - - 'VMX_Recording_Processor_Policy_'
             - !Ref ConnectInstanceAlias
       Roles:
-        - !Ref VMXKVStoS3Role
+        - !Ref VMXRecordingProcessorRole
 
   VMXPackagerPolicy:
     Type: AWS::IAM::ManagedPolicy

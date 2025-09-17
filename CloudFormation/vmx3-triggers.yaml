@@ -19,7 +19,7 @@ Parameters:
     Type: String
   VMXTranscriberArn:
     Type: String
-  VMXKVStoS3:
+  VMXRecordingProcessor:
     Type: String
   ConnectInstanceAlias:
     Type: String
@@ -39,13 +39,21 @@ Conditions:
 
 Resources:
 
-  IntegrationAssociation:
+  GuidedTaskPresignerFunctionAssociation:
     Type: AWS::Connect::IntegrationAssociation
     Condition: ConnectGuidedTasksEnabled
     Properties:
       InstanceId: !Ref ConnectInstanceARN
       IntegrationType: LAMBDA_FUNCTION
       IntegrationArn: !Ref VMXGuidedFlowPresignerArn
+
+  TimestampLambdaFunctionAssociation:
+    Type: AWS::Connect::IntegrationAssociation
+    Condition: ConnectGuidedTasksEnabled
+    Properties:
+      InstanceId: !Ref ConnectInstanceARN
+      IntegrationType: LAMBDA_FUNCTION
+      IntegrationArn: !Ref VMXTimestampFunction
 
   RecordingsBucketPermission:
     Type: AWS::Lambda::Permission
@@ -77,7 +85,7 @@ Resources:
       StartingPosition: LATEST
       FilterCriteria:
         Filters:
-          - Pattern: "{    \"data\":{        \"Attributes\":{            \"vmx3_flag\":[\"1\"]        },        \"Recordings\":{            \"StorageType\":[\"KINESIS_VIDEO_STREAM\"]        },        \"Agent\":[null]    }}"
+          - Pattern: "{    \"data\":{        \"Attributes\":{            \"vmx3_flag\":[\"1\"]        },        \"Recordings\":{            \"ParticipantType\":[\"IVR\"]        },        \"Agent\":[null]    }}"
 
   TranscriberRule:
     Type: AWS::Events::Rule

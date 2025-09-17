@@ -18,67 +18,61 @@ current_version = '2025.09.12'
 
 # Import the necessary modules for this function
 import json
-import os
 import boto3
 import logging
+import os
 
 # Establish logging configuration
 logger = logging.getLogger()
 
-def lambda_handler(event, context):
-    # Debug lines for troubleshooting
-    logger.debug('Code Version: ' + current_version)
-    logger.debug('VMX3 Package Version: ' + os.environ['package_version'])
+def genai_summarizer(event, context): 
+    # Log incoming event
     logger.debug(event)
-    
-    # Establish needed clients and resources
-    try:
-        s3_client = boto3.client('s3')
-        logger.debug('********** Clients initialized **********')
-    
-    except Exception as e:
-        logger.error('********** VMX Initialization Error: Could not establish needed clients **********')
-        logger.error(e)
-        raise Exception
-    
-    # Extract the needed content
-    try:
-        original_transcript_key = event['detail']['TranscriptionJobName']
-        transcript_key = original_transcript_key[5:]
-        transcript_job = transcript_key.replace('.json','')
-        contact_id = transcript_job.split('_',1)[0]
-        transcript_bucket = os.environ['s3_transcripts_bucket']
-        aws_account = event['account']
 
-        logger.debug('********** Successfully extracted data **********')
+    # Extract transcript
+    transcript = event['transcript_contents']
 
-    except Exception as e:
-        logger.error('********** Could not extract required data **********')
-        logger.error(e)
-        raise Exception
-    
-    # Establish the default failure message
-    message_content = {
-        'jobName':transcript_job,
-        'accountId':aws_account,
-        'status':'COMPLETED',
-        'results':{
-            'transcripts':[
+    # Establish Client and set model parameters
+    nova_model = os.environ['inference_model']
+    aws_region = os.environ['aws_region']
+    bedrock = boto3.client('bedrock-runtime',aws_region)
+
+    summary_prompt = 'You summarize voicemail messages left by callers. You are provided with a transcript of the voicemail. Read the transcript and summarize the content into 2-3 sentences if possible. Begin the summary with who the caller is, if that can be determined from the message. Also, make sure to provide the callback number, if left in the voicemail. Your summary will not be read by customers. Be as concise as possible while still clearly articulating the key points of the message. Provide the summary in the same language as the voicemail. Here is the transcript of the voicemail: ' 
+
+    conversation = [
+        {
+            'role': 'user',
+            'content': [
                 {
-                    'transcript':'Transcription failed. Please refer to the recording link below, and/or expand the "Show all task information" section for details about the contact.'
+                    'text': summary_prompt
+                },
+                {
+                    'text': transcript
                 }
-            ]
+            ],
         }
+    ]
+
+    nova_config = {
+        'temperature': 0.5,
+        'topP': 0.9
     }
-    
-    # Write the error message to S3, mimicking the normal transcription process.
+
+    # Do the summarization
     try:
-        response = s3_client.put_object(Body=json.dumps(message_content), Bucket=transcript_bucket, Key=original_transcript_key)
-        logger.info('Voicemail with contact id ' + contact_id + ' could not be transcribed.')
+        summarization_response = bedrock.converse(
+            modelId=nova_model,
+            messages=conversation,
+            inferenceConfig=nova_config
+        )
+        logger.debug(summarization_response)
 
-        return response
+        genai_summary = {'genai_summary':summarization_response['output']['message']['content'][0]['text']}
+        logger.debug('********** Summarization complete **********')
 
+        return genai_summary
+    
     except Exception as e:
-        logger.error('********** Could not write message **********')
+        logger.error('********** Record Result: Failed to generate GenAI summary **********')
         logger.error(e)
         raise Exception

@@ -1,7 +1,7 @@
-current_version = '2024.09.01'
+current_version = '2025.09.12'
 '''
 **********************************************************************************************************************
- *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
+ *  Copyright 2025 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
  *                                                                                                                    *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated      *
  *  documentation files (the "Software"), to deal in the Software without restriction, including without limitation   *
@@ -29,6 +29,9 @@ import sub_connect_task
 import sub_ses_email
 import sub_connect_guided_task
 
+# Import the GenAI Sub function
+import sub_genai_summary
+
 # Establish logging configuration
 logger = logging.getLogger()
 
@@ -51,22 +54,20 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error('********** VMX INITIALIZATION: Failed to initialize clients **********')
         logger.error(e)
-        
-        return {'status':'complete','result':'ERROR','reason':'Failed to initialize'}
+        raise Exception
 
     # Establish writer data
     writer_payload = {}
     
-    # Process the record
+    # 1. Process the record
     # Establish data for transcript and recording, and clear out write tests.
     try:
-        original_transcript_key = event['detail']['object']['key']
-        if original_transcript_key == '.write_access_check_file.temp':
+        transcript_key = event['detail']['object']['key']
+        if transcript_key.endswith('.write_access_check_file.temp'):
             return('********** WRITE TEST - IGNORE **********')
-        transcript_key = original_transcript_key[5:]
-        transcript_job = transcript_key.replace('.json','')
-        contact_id = transcript_job.split('_',1)[0]
-        recording_key = contact_id + '.wav'
+        transcript_file = transcript_key.rsplit('/',1)[1]
+        contact_id = transcript_file.replace('.json','')
+        recording_key = transcript_key.replace('.json','.wav')
         transcript_bucket = os.environ['s3_transcripts_bucket']
         recording_bucket = os.environ['s3_recordings_bucket']
         logger.debug('********** Successvulluy extracted ID data **********')
@@ -74,8 +75,7 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error('********** Record Result: Failed to extract keys **********')
         logger.error(e)
-        
-        return {'status':'complete','result':'ERROR','reason':'Failed to extract keys'}
+        raise Exception
 
     # Extract the tags from the recording object
     try:
@@ -100,7 +100,7 @@ def lambda_handler(event, context):
 
     # Grab the transcript from S3
     try:
-        transcript_object = s3_resource.Object(transcript_bucket, original_transcript_key)
+        transcript_object = s3_resource.Object(transcript_bucket, transcript_key)
         file_content = transcript_object.get()['Body'].read().decode('utf-8')
         json_content = json.loads(file_content)
         transcript_contents = json_content['results']['transcripts'][0]['transcript']
@@ -191,6 +191,13 @@ def lambda_handler(event, context):
             InitialContactId = contact_id
         )
         json_attributes = contact_attributes['Attributes']
+        # Check for GenAI Summary option and complete if necessary
+        if 'vmx3_do_genai_summary' not in json_attributes:
+            json_attributes.update({'vmx3_do_genai_summary':os.environ['vmx3_do_genai_summary']})
+        
+        if json_attributes['vmx3_do_genai_summary'] == 'true':
+            json_attributes.update(genai_summarizer({'transcript_contents':transcript_contents}))
+
         json_attributes.update({'entity_name':entity_name,'entity_id':entity_id,'entity_description':entity_description,'transcript_contents':transcript_contents,'callback_number':json_attributes['vmx3_from'],'vmx3_dateTime': formatted_datetime})
         writer_payload.update({'json_attributes':json_attributes})
         contact_attributes = json.dumps(contact_attributes['Attributes'])
@@ -235,8 +242,7 @@ def lambda_handler(event, context):
         except Exception as e:
             logger.error('********** Record Result: Failed to generate presigned URL **********')
             logger.error(e)
-            
-            return {'status':'complete','result':'ERROR','reason':'Failed to generate presigned URL'}
+            raise Exception
 
     logger.debug(writer_payload)
 
@@ -249,8 +255,7 @@ def lambda_handler(event, context):
         except Exception as e:
             logger.error('********** Failed to activate task function **********')
             logger.error(e)
-            
-            return {'status':'complete','result':'ERROR','reason':'Failed to activate task function'}
+            raise Exception
         
     elif vmx3_mode == 'email':
 
@@ -280,8 +285,7 @@ def lambda_handler(event, context):
         except Exception as e:
             logger.error('********** Failed to activate email function **********')
             logger.error(e)
-            
-            return {'status':'complete','result':'ERROR','reason':'Failed to activate email function'}
+            raise Exception
         
     elif vmx3_mode == 'guided_task':
 
@@ -291,8 +295,7 @@ def lambda_handler(event, context):
         except Exception as e:
             logger.error('********** Failed to activate task function **********')
             logger.error(e)
-            
-            return {'status':'complete','result':'ERROR','reason':'Failed to activate guided task function'}
+            raise Exception
 
     else:
         logger.error('********** Invalid mode selection **********')
@@ -319,7 +322,6 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error('********** Record Failed to delete transcription job **********')
         logger.error(e)
-        
 
     # Clear the vmx_flag for this contact
     try:
@@ -335,6 +337,5 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error('********** Failed to change vmx3_flag **********')
         logger.error(e)
-        
 
     return {'status': 'complete','result': 'Record processed'}

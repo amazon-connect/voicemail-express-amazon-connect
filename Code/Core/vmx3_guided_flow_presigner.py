@@ -1,7 +1,7 @@
-current_version = '2024.09.01'
+current_version = '2025.09.12'
 '''
 **********************************************************************************************************************
- *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
+ *  Copyright 2025 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
  *                                                                                                                    *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated      *
  *  documentation files (the "Software"), to deal in the Software without restriction, including without limitation   *
@@ -68,9 +68,7 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error('********** S3 client failed to initialize **********')
         logger.error(e)
-        response.update({'status':'complete','result':'ERROR','reason':'s3 client init failed'})
-
-        return response
+        raise Exception
 
     # Generate the presigned URL and return
     try:
@@ -92,7 +90,6 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error('********** Presigned URL Failed to generate **********')
         logger.error(e)
-        response.update({'status':'complete','result':'ERROR','reason':'presigned url generation failed'})
-        return response
+        raise Exception
 
     return response

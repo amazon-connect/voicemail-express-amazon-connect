@@ -1,7 +1,7 @@
-current_version = '2024.09.01'
+current_version = '2025.09.12'
 '''
 **********************************************************************************************************************
- *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
+ *  Copyright 2025 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
  *                                                                                                                    *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated      *
  *  documentation files (the "Software"), to deal in the Software without restriction, including without limitation   *
@@ -40,8 +40,7 @@ def vmx3_to_connect_task(writer_payload):
     except Exception as e:
         logger.error('********** VMX Initialization Error: Could not establish needed clients **********')
         logger.error(e)
-
-        return {'status':'complete','result':'ERROR','reason':'Failed to Initialize clients'}
+        raise Exception
 
     logger.debug('Beginning Voicemail to Task')
 
@@ -61,6 +60,38 @@ def vmx3_to_connect_task(writer_payload):
     else:
         contact_flow = os.environ['default_task_flow']
 
+    # Check if GenAI summary was selected and modify the references/description accordingly.
+    if writer_payload['json_attributes']['vmx3_do_genai_summary'] == 'true':
+        task_references = {
+            'Date Voicemail Received': {
+                'Value': writer_payload['json_attributes']['vmx3_dateTime'],
+                'Type': 'STRING'
+            },
+            'Original Queue': {
+                'Value': writer_payload['json_attributes']['entity_name'],
+                'Type':'STRING'
+            },
+            'Voicemail Transcript': {
+                'Value': transcript,
+                'Type':'STRING'
+            }
+        }
+        task_description = writer_payload['json_attributes']['vmx3_genai_summary']
+    
+    else: 
+        task_references = {
+            'Date Voicemail Received': {
+                'Value': writer_payload['json_attributes']['vmx3_dateTime'],
+                'Type': 'STRING'
+            },
+            'Original Queue': {
+                'Value': writer_payload['json_attributes']['entity_name'],
+                'Type':'STRING'
+            }
+        }
+        task_description = transcript
+
+    # Create the task
     try:
         create_task = connect_client.start_task_contact(
             InstanceId=writer_payload['instance_id'],
@@ -70,30 +101,16 @@ def vmx3_to_connect_task(writer_payload):
                 'Callback_Number': writer_payload['json_attributes']['callback_number']
             },
             Name='Voicemail for ' + writer_payload['json_attributes']['entity_name'],
-            References={
-                'Date Voicemail Received': {
-                    'Value': writer_payload['json_attributes']['vmx3_dateTime'],
-                    'Type': 'STRING'
-                },
-                'Original Queue': {
-                    'Value': writer_payload['json_attributes']['entity_name'],
-                    'Type':'STRING'
-                },
-                'Select link below to play voicemail recording': {
-                    'Value': writer_payload['json_attributes']['presigned_url'],
-                    'Type': 'URL'
-                }
-            },
-            Description=transcript,
+            References=task_references,
+            Description=task_description,
             ClientToken=writer_payload['contact_id']
         )
         logger.debug('********** Task Created **********')
         logger.debug(create_task)
 
-        return 'success'
+        return create_task
 
     except Exception as e:
         logger.error('********** Failed to create task **********')
         logger.error(e)
-
-        return 'fail'
+        raise Exception

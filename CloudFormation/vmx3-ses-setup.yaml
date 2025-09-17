@@ -28,7 +28,7 @@ Resources:
               - !Ref ConnectInstanceAlias
         SubjectPart: 'Voicemail from {{callback_number}}'
         TextPart: 'A voicemail was left for the {{entity_name}} queue from {{callback_number}}. You can listen to the message via the following URL: {{presigned_url}}'
-        HtmlPart: '<h1>{{entity_name}} Voicemail</h1><p>There is a voicemail from {{callback_number}}.</p><p><a href="{{presigned_url}}">Listen to the voicemail.</a></p><h2>Voicemail transcription</h2><p>{{transcript_contents}}</p>'
+        HtmlPart: '<h1>{{entity_name}} Voicemail</h1><p>There is a voicemail from {{callback_number}}.</p><p><a href="{{presigned_url}}">Listen to the voicemail.</a></p><h2>GenAI Voicemail Summary</h2><p>{{vmx3_genai_summary}}</p><h2>Voicemail transcription</h2><p>{{transcript_contents}}</p>'
 
   VMEmailDefaultAgentTemplate:
     Type: 'AWS::SES::Template'
@@ -41,7 +41,7 @@ Resources:
               - !Ref ConnectInstanceAlias
         SubjectPart: 'Voicemail from {{callback_number}}'
         TextPart: 'Dear {{entity_name}}, A voicemail was left for you from {{callback_number}}. You can listen to the message via the following URL: {{presigned_url}}'
-        HtmlPart: '<h1>Voicemail for {{entity_name}} </h1><p>There is a voicemail from {{callback_number}}.</p><p><a href="{{presigned_url}}">Listen to the voicemail.</a></p><h2>Voicemail transcription</h2><p>{{transcript_contents}}</p>'
+        HtmlPart: '<h1>Voicemail for {{entity_name}} </h1><p>There is a voicemail from {{callback_number}}.</p><p><a href="{{presigned_url}}">Listen to the voicemail.</a></p><h2>GenAI Voicemail Summary</h2><p>{{vmx3_genai_summary}}</p><h2>Voicemail transcription</h2><p>{{transcript_contents}}</p>'
 
   VMXSESTools:
     Type: AWS::Lambda::Function

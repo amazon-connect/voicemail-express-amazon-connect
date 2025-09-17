@@ -20,7 +20,7 @@ This typically means that your KVS stream has been configured with no retention 
 Voicemail Express uses the Amazon Kinesis Video Stream to capture the recording. It is only expecting there to be one audio stream, from the customer, when it begins recording. If you have selected both **From the customer** and **To the customer** when initializing your KVS stream in your contact flow, the VMXKVStoS3 function will attempt to mix the two channels together, causing garbled audio. Make sure that you are only enabling the **From the customer** option when starting streaming.
 
 ### I am not getting any voicemails
-Make sure that you are setting the **vmx_flag** value to `1` in your contact flows. This must be set in order for the VMXKVStoS3 function to know that it should process this record as a voicemail.
+Make sure that you are setting the **vmx3_flag** value to `1` in your contact flows. This must be set in order for the VMXKVStoS3 function to know that it should process this record as a voicemail.
 
 ## Email Delivery Issues
 ### I see no errors, but email is not being delivered

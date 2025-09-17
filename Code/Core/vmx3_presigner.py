@@ -1,7 +1,7 @@
-current_version = '2024.09.01'
+current_version = '2025.09.12'
 '''
 **********************************************************************************************************************
- *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
+ *  Copyright 2025 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
  *                                                                                                                    *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated      *
  *  documentation files (the "Software"), to deal in the Software without restriction, including without limitation   *
@@ -49,9 +49,7 @@ def lambda_handler(event, context):
         logger.error('********** Key retrieval failed **********')
         logger.error(e)
         
-        response.update({'status':'complete','result':'ERROR','reason':'key retrieval failed'})
-
-        return response
+        raise Exception
 
     # Configure the environment for the URL generation and initialize s3 client
     try:
@@ -82,9 +80,7 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error('********** S3 client failed to initialize **********')
         logger.error(e)
-        response.update({'status':'complete','result':'ERROR','reason':'s3 client init failed'})
-
-        return response
+        raise Exception
 
     # Generate the presigned URL and return
     try:
@@ -114,9 +110,7 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error('********** Presigned URL Failed to generate **********')
         logger.error(e)
-        response.update({'status':'complete','result':'ERROR','reason':'presigned url generation failed'})
-
-        return response
+        raise Exception
 
 # Sub to retrieve the secrets from Secrets Manager
 def get_secret():
@@ -132,9 +126,7 @@ def get_secret():
     except Exception as e:
         logger.error('********** Secrets environment vars failed to set **********')
         logger.error(e)
-        secret_response.update({'status':'complete','result':'ERROR','reason':'environment vars failed'})
-
-        return secret_response
+        raise Exception
 
     # Create a Secrets Manager session
     try:
@@ -149,9 +141,7 @@ def get_secret():
     except Exception as e:
         logger.error('********** Secrets session failed to initialize **********')
         logger.error(e)
-        secret_response.update({'status':'complete','result':'ERROR','reason':'AWS Secrets Manager session failed'})
-
-        return secret_response
+        raise Exception
 
     # Get the secrets
     try:
@@ -168,6 +158,4 @@ def get_secret():
     except Exception as e:
         logger.error('********** Failed to get secrets **********')
         logger.error(e)
-        secret_response.update({'status':'complete','result':'ERROR','reason':'failed to get secrets'})
-
-        return secret_response
+        raise Exception

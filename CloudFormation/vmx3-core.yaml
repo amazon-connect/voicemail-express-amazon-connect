@@ -7,6 +7,8 @@ Parameters:
     Type: String
   ExpiredRecordingBehavior:
     Type: String
+  EnableBucketVersioning:
+    Type: String
   EnableVMToConnectTask:
     Type: String
   EnableVMToConnectGuidedTask:
@@ -46,6 +48,9 @@ Conditions:
     - !Equals
       - !Ref EnableVMToEmail
       - 'yes'
+  EnableVersioning: !Equals
+    - !Ref EnableBucketVersioning
+    - 'yes'
 
 Resources:
   VMXKVStoS3Role:
@@ -202,6 +207,12 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      VersioningConfiguration:
+        !If
+          - EnableVersioning
+          - 
+            Status: Enabled
+          - !Ref 'AWS::NoValue'
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerPreferred
@@ -238,6 +249,12 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      VersioningConfiguration:
+        !If
+          - EnableVersioning
+          - 
+            Status: Enabled
+          - !Ref 'AWS::NoValue'
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerPreferred

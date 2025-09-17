@@ -1,7 +1,7 @@
-current_version = '2024.09.01'
+current_version = '2025.09.12'
 '''
 **********************************************************************************************************************
- *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
+ *  Copyright 2025 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
  *                                                                                                                    *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated      *
  *  documentation files (the "Software"), to deal in the Software without restriction, including without limitation   *
@@ -40,14 +40,14 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error('********** VMX Initialization Error: Could not establish needed clients **********')
         logger.error(e)
-        
-        return {'status':'complete','result':'ERROR','reason':'Failed to Initialize clients'}
+        raise Exception
 
-
+    # 1. Load the data
     # Grab incoming data elements from the S3 event
     try:
         recording_key = event['detail']['object']['key']
-        recording_name = recording_key.replace('voicemail_recordings/','')
+        recording_name = recording_key.rsplit('/',1)[1]
+        transcript_key_prefix = recording_key.rsplit('/',1)[0]
         contact_id = recording_name.replace('.wav','')
         recording_bucket = event['detail']['bucket']['name']
         recording_region = event['region']
@@ -56,8 +56,7 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error('********** Failed to extract data from event **********')
         logger.error(e)
-        
-        return {'status':'complete','result':'ERROR','reason':'Failed to extract data from event'}
+        raise Exception
 
     # Establish the S3 client and get the object tags
     try:
@@ -77,8 +76,7 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error('********** Failed to load tags from object **********')
         logger.error(e)
-        
-        return {'status':'complete','result':'ERROR','reason':'Failed to load tags from object'}
+        raise Exception
 
     # Build the Recording URL
     try:
@@ -88,12 +86,11 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error('********** Failed to generate recording URL **********')
         logger.error(e)
-        
-        return {'status':'complete','result':'ERROR','reason':'Failed to generate recording URL'}
+        raise Exception
 
-    # Do the transcription
+    # Step 2. Do the transcription
     try:
-        # Esteablish the client
+        # Establish the Transcribe client
         transcribe_client = boto3.client('transcribe')
 
         # Submit the transcription job
@@ -104,14 +101,14 @@ def lambda_handler(event, context):
             Media={
                 'MediaFileUri': recording_url
             },
-            OutputBucketName=os.environ['s3_transcripts_bucket']
+            OutputBucketName=os.environ['s3_transcripts_bucket'],
+            OutputKey=transcript_key_prefix + '/' + contact_id + '.json'
         )
         logger.debug('********** Transcribe job submitted **********')
 
-        return {'status': 'complete','result': 'voicemail processed'}
+        return 'Voicemail Transcription Job Submitted - Move to Packager'
 
     except Exception as e:
         logger.error('********** Transcription job rejected **********')
         logger.error(e)
-        
-        return {'status':'complete','result':'ERROR','reason':'Transcription job rejected'}
+        raise Exception

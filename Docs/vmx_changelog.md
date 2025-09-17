@@ -1,4 +1,8 @@
 # Voicemail Express 3 Changelog
+## 2025.09.12
+-  Changed VMX3 process to use Amazon Connect's IVR recording feature instead of KVS. Including ability to specifically extract VM from full IVR Recording use cases.
+-  Changed execution process to be triggered by EventBridge Events one a specific bus to improved observability
+
 ## 2024.09.01
 -  Added guided task option, visualizing a player, and obfuscating short lived URL
 -  IAM Roles and policies by function instead of one central role/policy
