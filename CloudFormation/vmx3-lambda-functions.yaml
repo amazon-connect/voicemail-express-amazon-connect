@@ -35,8 +35,6 @@ Parameters:
     Type: String
   VMXDefaultGuidedTaskFlow:
     Type: String
-  VMXSecrets:
-    Type: String
   VMXS3RecordingsBucket:
     Type: String
   VMXS3TranscriptsBucket:
@@ -168,8 +166,6 @@ Resources:
             Ref: TaskRecordingLinksExpireInXDays
           email_url_expire:
             Ref: EmailRecordingLinksExpireInXDays
-          secrets_key_id:
-            Ref: VMXSecrets
           package_version:
             Ref: EXPTemplateVersion
       FunctionName:

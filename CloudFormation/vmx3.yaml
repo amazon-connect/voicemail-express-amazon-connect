@@ -439,10 +439,6 @@ Resources:
           - ConnectGuidedTasksEnabled
           - !GetAtt VMXContactFlowStack.Outputs.VMXExampleGuidedTaskFlowID
           - AWS::NoValue
-        VMXSecrets: !If
-          - NonGuidedOptions
-          - !GetAtt VMXCoreStack.Outputs.VMXSecrets
-          - AWS::NoValue
         VMXS3RecordingsBucket: !GetAtt VMXCoreStack.Outputs.VMXS3RecordingsBucket
         VMXS3TranscriptsBucket: !GetAtt VMXCoreStack.Outputs.VMXS3TranscriptsBucket
         VMAgentAddressKey: !Ref VMAgentAddressKey
