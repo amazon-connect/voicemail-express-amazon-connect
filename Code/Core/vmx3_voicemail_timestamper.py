@@ -16,7 +16,8 @@ current_version = '2025.09.12'
  **********************************************************************************************************************
 '''
 
-# Import the necessary modules for this function
+# Import required modules
+import json
 import logging
 import datetime
 

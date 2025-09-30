@@ -16,13 +16,12 @@ current_version = '2025.09.12'
  **********************************************************************************************************************
 '''
 
-# Import the necessary modules for this function
-import json
+# Import required modules
 import boto3
+import json
 import logging
-from botocore.client import Config
-import base64
 import os
+from botocore.client import Config
 
 # Establish logging configuration
 logger = logging.getLogger()

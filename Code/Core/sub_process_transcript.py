@@ -22,70 +22,57 @@ import json
 import logging
 import os
 
+# Import the Packager Key Functions
+import sub_genai_summary
+
 # Establish logging configuration
 logger = logging.getLogger()
 
-def genai_summarizer(function_payload):
+def process_transcript(function_payload):
 
     # Debug lines for troubleshooting
     logger.debug('Function Name: ' + os.environ['AWS_LAMBDA_FUNCTION_NAME'])
     logger.debug('Code Version: ' + current_version)
     logger.debug('VMX3 Package Version: ' + os.environ['package_version'])
-    logger.debug('********** Beginning GenAI Summarizer **********')
+    logger.info('********** Beginning Sub:Process Transcription **********')
     logger.debug(function_payload)
 
-    # Establish empty container
-    sub_response = {} # for the response
+    # Establish an empty container
+    sub_response = {}
 
-    # 1. Extract the transcript and set the parameters for the Generative AI Summarization
-    # Extract transcript
-    vmx3_transcript = function_payload['vmx3_transcript_contents']
-
-    # Establish Client and set model parameters
-    nova_model = os.environ['inference_model']
-    aws_region = os.environ['aws_region']
-    bedrock = boto3.client('bedrock-runtime',aws_region)
-
-    summary_prompt = 'You summarize voicemail messages left by callers. You are provided with a transcript of the voicemail. Read the transcript and summarize the content into 4-5 sentences at most. Begin the summary with who the caller is, if that can be determined from the message. Also, make sure to provide the callback number, if left in the voicemail. Your summary will not be read by customers. Be as concise as possible while still clearly articulating the key topic of the message. Your entire response should never exceed 500 characters. Here is the transcript of the voicemail: '
-
-    conversation = [
-        {
-            'role': 'user',
-            'content': [
-                {
-                    'text': summary_prompt
-                },
-                {
-                    'text': vmx3_transcript
-                }
-            ],
-        }
-    ]
-
-    nova_config = {
-        'temperature': 0.5,
-        'topP': 0.9
-    }
-    logger.debug('********** Step 1 of 2 complete **********')
-
-    # 2. Send the summarization request
-    # Send the request
+     # Load the transcript from S3
     try:
-        summarization_response = bedrock.converse(
-            modelId=nova_model,
-            messages=conversation,
-            inferenceConfig=nova_config
-        )
-        logger.debug(summarization_response)
-        logger.debug('********** Summarization complete **********')
-    
+        s3_resource = boto3.resource('s3')
+        transcript_object = s3_resource.Object(function_payload['function_data']['transcript_bucket'], function_payload['function_data']['transcript_key'])
+        file_content = transcript_object.get()['Body'].read().decode('utf-8')
+        json_content = json.loads(file_content)
+        vmx3_transcript_contents = json_content['results']['transcripts'][0]['transcript']
+        sub_response.update({'vmx3_transcript_contents':vmx3_transcript_contents})
+        logger.debug('********** Sub:Process Transcription - Retrieved transcript from S3 **********')
+
     except Exception as e:
-        logger.error('********** Record Result: Failed to generate GenAI summary **********')
+        logger.error('********** Sub:Process Transcription - Failed to retrieve transcript from S3 **********')
         logger.error(e)
         raise Exception
     
-    # Send the result
-    sub_response.update({'vmx3_genai_summary':summarization_response['output']['message']['content'][0]['text']})
-    logger.debug('********** Step 2 of 2 complete **********')
+    # Check for GenAI Summary option and complete if necessary
+    if 'vmx3_do_genai_summary' not in function_payload['vmx_data']:
+        function_payload['vmx_data'].update({'vmx3_do_genai_summary':os.environ['vmx3_do_genai_summary']})
+    
+    if function_payload['vmx_data']['vmx3_do_genai_summary'] == 'true':
+        try:
+            do_genai_summary = sub_genai_summary.genai_summarizer({'vmx3_transcript_contents':sub_response['vmx3_transcript_contents']})
+            sub_response.update(do_genai_summary)
 
+        except Exception as e:
+            logger.error('********** Sub:Process Transcriptionn - Summarization Failed **********')
+            logger.error(e)
+            sub_response.update({'vmx3_genai_summary':'Summarization Failed'})
+    
+    else: 
+        sub_response.update({'vmx3_genai_summary':'Summarization not enabled for this contact.'})
+        logger.debug('********** Sub:Process Transcriptionn - Summarization not enabled for contact **********')
+
+    logger.info('********** Sub:Process Transcription - COMPLETE **********')
+    logger.debug(sub_response)
     return sub_response

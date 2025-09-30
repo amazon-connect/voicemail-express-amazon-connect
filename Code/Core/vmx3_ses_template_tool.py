@@ -16,9 +16,9 @@ current_version = '2025.09.12'
  **********************************************************************************************************************
 '''
 
-# Import the necessary modules for this function
-import json
+# Import required modules
 import boto3
+import json
 import logging
 import os
 
@@ -39,7 +39,8 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error('********** VMX Initialization Error: Could not establish needed clients **********')
         logger.error(e)
-        raise Exception
+
+        return {'status':'complete','result':'ERROR','reason':'Failed to Initialize clients'}
 
     if event['mode'] == 'create':
         # Creates the template using the provided values
@@ -60,7 +61,8 @@ def lambda_handler(event, context):
         except Exception as e:
             logger.error('Template creation failed')
             logger.error(e)
-            raise Exception
+
+            return 'Template creation failed'
 
     elif event['mode'] == 'get':
         try:
@@ -78,7 +80,8 @@ def lambda_handler(event, context):
         except Exception as e:
             logger.error('********** Template retrieval failed **********')
             logger.error(e)
-            raise Exception
+
+            return 'Template retrieval failed'
 
     elif event['mode'] == 'update':
         # Updates the template using the provided values
@@ -99,7 +102,8 @@ def lambda_handler(event, context):
         except Exception as e:
             logger.error('********** Template update failed **********')
             logger.error(e)
-            raise Exception
+
+            return 'Template update failed'
 
 
     elif event['mode'] == 'delete':
@@ -116,4 +120,4 @@ def lambda_handler(event, context):
         except Exception as e:
             logger.error('********** Template failed to delete **********')
             logger.error(e)
-            raise Exception
+            return 'Template delete failed'

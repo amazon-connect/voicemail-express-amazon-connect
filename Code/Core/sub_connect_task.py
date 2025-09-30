@@ -16,23 +16,28 @@ current_version = '2025.09.12'
  **********************************************************************************************************************
 '''
 
-# Import the necessary modules for this flow to work
-import json
-import os
-import logging
+# Import required modules
 import boto3
+import json
+import logging
+import os
 
 # Establish logging configuration
 logger = logging.getLogger()
 
-def vmx3_to_connect_task(writer_payload):
+def vmx3_to_connect_task(function_payload):
 
     # Debug lines for troubleshooting
+    logger.debug('Function Name: ' + os.environ['AWS_LAMBDA_FUNCTION_NAME'])
     logger.debug('Code Version: ' + current_version)
     logger.debug('VMX3 Package Version: ' + os.environ['package_version'])
-    logger.debug(writer_payload)
+    logger.debug('********** Beginning Voicemail Task Delivery **********')
+    logger.debug(function_payload)
 
-    # Establish needed clients and resources
+    # Establish an empty container
+    function_response = {}
+
+    # 1. Establish needed clients
     try:
         connect_client = boto3.client('connect')
         logger.debug('********** Clients initialized **********')
@@ -42,73 +47,108 @@ def vmx3_to_connect_task(writer_payload):
         logger.error(e)
         raise Exception
 
-    logger.debug('Beginning Voicemail to Task')
+    logger.debug('********** Step 1 of 3 Complete **********')
 
+    # 2. Set parameters
+    # Make sure transcript fits in a task field and truncate if it does not.
     # Make sure transcript fits in field and truncate if it does not.
-    transcript = writer_payload['json_attributes']['transcript_contents']
-    if len(transcript) > 4096:
-        transcript = transcript[:4092] + ' ...'
+    vmx3_transcript = function_payload['vmx_data']['vmx3_transcript_contents']
+    if len(vmx3_transcript) > 2048:
+        vmx3_short_transcript = vmx3_transcript[:2048] + ' ...(truncated)'
+        logger.debug('********** Transcript truncated **********')
+    else:
+        logger.debug('********** Transcript within limits **********')
+        vmx3_short_transcript = vmx3_transcript
     
     # Check for a task flow to use, if not, use default
-    if 'vmx3_task_flow' in writer_payload['json_attributes']:
-        if writer_payload['json_attributes']['vmx3_task_flow']:
-            contact_flow = writer_payload['json_attributes']['vmx3_task_flow']
+    if 'vmx3_task_flow' in function_payload['vmx_data']:
+        if function_payload['vmx_data']['vmx3_task_flow']:
+            contact_flow = function_payload['vmx_data']['vmx3_task_flow']
         else:
-            writer_payload.update({'vmx3_task_flow':os.environ['default_task_flow']})
             contact_flow = os.environ['default_task_flow']
 
     else:
         contact_flow = os.environ['default_task_flow']
 
     # Check if GenAI summary was selected and modify the references/description accordingly.
-    if writer_payload['json_attributes']['vmx3_do_genai_summary'] == 'true':
+    if function_payload['vmx_data']['vmx3_do_genai_summary'] == 'true':
+        logger.debug('********** GenAI Summary Enabled **********')
         task_references = {
             'Date Voicemail Received': {
-                'Value': writer_payload['json_attributes']['vmx3_dateTime'],
+                'Value': function_payload['vmx_data']['vmx3_datetime'],
                 'Type': 'STRING'
             },
             'Original Queue': {
-                'Value': writer_payload['json_attributes']['entity_name'],
+                'Value': function_payload['vmx_data']['vmx3_queue_name'],
+                'Type':'STRING'
+            },
+            'GenAI Summary': {
+                'Value': function_payload['vmx_data']['vmx3_genai_summary'],
                 'Type':'STRING'
             },
             'Voicemail Transcript': {
-                'Value': transcript,
+                'Value': vmx3_short_transcript,
                 'Type':'STRING'
+            },
+            'Playback URL': {
+                'Value': function_payload['vmx_data']['vmx3_presigned_url'],
+                'Type': 'URL',
             }
         }
-        task_description = writer_payload['json_attributes']['vmx3_genai_summary']
+        task_description = function_payload['vmx_data']['vmx3_genai_summary']
     
-    else: 
+    else:
+        logger.debug('********** GenAI Summary Disabled **********')
         task_references = {
-            'Date Voicemail Received': {
-                'Value': writer_payload['json_attributes']['vmx3_dateTime'],
+            'Date Received': {
+                'Value': function_payload['vmx_data']['vmx3_datetime'],
                 'Type': 'STRING'
             },
-            'Original Queue': {
-                'Value': writer_payload['json_attributes']['entity_name'],
+            'Source Queue': {
+                'Value': function_payload['vmx_data']['vmx3_queue_name'],
                 'Type':'STRING'
+            },
+            'Voicemail Transcript': {
+                'Value': vmx3_short_transcript,
+                'Type':'STRING'
+            },
+            'GenAI Summary': {
+                'Value': 'Not enabled for this voicemail.',
+                'Type':'STRING'
+            },
+            'Playback URL': {
+                'Value': function_payload['vmx_data']['vmx3_presigned_url'],
+                'Type': 'URL',
             }
         }
-        task_description = transcript
+        task_description = vmx3_short_transcript
+    logger.debug('********** Task References Set **********')
 
-    # Create the task
+    # 3. Create the task and return response if successful
     try:
         create_task = connect_client.start_task_contact(
-            InstanceId=writer_payload['instance_id'],
+            InstanceId=function_payload['function_data']['instance_id'],
             ContactFlowId=contact_flow,
-            PreviousContactId=writer_payload['contact_id'],
+            PreviousContactId=function_payload['function_data']['contact_id'],
             Attributes={
-                'Callback_Number': writer_payload['json_attributes']['callback_number']
+                'vmx3_callback_number': function_payload['vmx_data']['vmx3_from'],
+                'vmx3_genai_summary': function_payload['vmx_data']['vmx3_genai_summary'],
+                'vmx3_timestamp': function_payload['vmx_data']['vmx3_datetime'],
+                'vmx3_source_queue': function_payload['vmx_data']['vmx3_queue_name'],
+                'vmx3_transcript': vmx3_short_transcript,
+                'vmx3_preferred_agent_id': function_payload['vmx_data']['vmx3_preferred_agent_id']
             },
-            Name='Voicemail for ' + writer_payload['json_attributes']['entity_name'],
+            Name='Amazon Connect Voicemail',
             References=task_references,
             Description=task_description,
-            ClientToken=writer_payload['contact_id']
+            ClientToken=function_payload['function_data']['contact_id']
         )
-        logger.debug('********** Task Created **********')
         logger.debug(create_task)
+        logger.debug('********** Voicemail Task Created **********')
+        logger.debug('********** Step 3 of 3 Complete **********')
 
-        return create_task
+        function_response.update({'result':'success','task': create_task})
+        return function_response
 
     except Exception as e:
         logger.error('********** Failed to create task **********')

@@ -16,16 +16,16 @@ current_version = '2025.09.12'
  **********************************************************************************************************************
 '''
 
-# Import the necessary modules for this function
-import json
-import os
-import logging
+# Import required modules
 import boto3
-import io
+import json
+import logging
+import os
 import base64
-import urllib.parse
 from datetime import datetime, timezone
+import io
 from pydub import AudioSegment
+import urllib.parse
 
 # Establish logging configuration
 logger = logging.getLogger()
@@ -201,7 +201,7 @@ def audio_processor(recording_data):
         logger.debug(vm_encoded_tags)
 
         # Perform the upload
-        vm_upload = s3_client.upload_fileobj(out_buffer, recording_data['vm_bucket'], recording_data['vm_key'],ExtraArgs={'Tagging': vm_encoded_tags})
+        vm_upload = s3_client.upload_fileobj(out_buffer, recording_data['vm_bucket'], recording_data['vm_key'],ExtraArgs={'ContentType':'audio/wav','Tagging': vm_encoded_tags})
 
         return vm_upload
 

@@ -16,11 +16,11 @@ current_version = '2025.09.12'
  **********************************************************************************************************************
 '''
 
-# Import the necessary modules for this function
-import json
-import os
+# Import required modules
 import boto3
+import json
 import logging
+import os
 
 # Establish logging configuration
 logger = logging.getLogger()
@@ -39,7 +39,8 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error('********** VMX Initialization Error: Could not establish needed clients **********')
         logger.error(e)
-        raise Exception
+
+        return {'status':'complete','result':'ERROR','reason':'Failed to Initialize clients'}
     
     # Extract the needed content
     try:
@@ -55,7 +56,8 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error('********** Could not extract required data **********')
         logger.error(e)
-        raise Exception
+
+        return {'status':'complete','result':'ERROR','reason':'Failed to extract data'}
     
     # Establish the default failure message
     message_content = {
@@ -81,4 +83,5 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error('********** Could not write message **********')
         logger.error(e)
-        raise Exception
+
+        return {'status':'complete','result':'ERROR','reason':'Failed to write event'}

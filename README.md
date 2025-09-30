@@ -8,7 +8,7 @@ Voicemail Express is designed to provide basic voicemail functionality to Amazon
    -  Uses Amazon Connect's built-in IVR recording option to reduce complexity, increase compatability, and remove KVS for all deployments
    -  Deployment option for GovCloud Implementations
    -  Changes agent voicemail from using personal queues to preferred-agent routing to eliminate over-prioritization of voicemails
-   -  Added option for generative AI summary of voicemail (not currently available for Canada or South Africa)
+   -  Added option for generative AI summary of voicemail
 -  **Security Enhancements**: 
    -  Support for bucket versioning
 -  **Performance Validation**:
@@ -20,13 +20,18 @@ Voicemail Express is designed to provide basic voicemail functionality to Amazon
    -  Documented changes needed to support voicemail messages >5 minutes
    -  Documented configuration allowing for voicemail self-service
    -  Documented configuration for in-queue voicemails
--  **Fixes:**
-   -  Truncating voicemail transcripts longer than 4096 bytes (Field limit in tasks)
+-  **Fixes/Improvements:**
+   -  Truncating voicemail transcripts longer than 2048 bytes ensure task compatability
    -  Additional filtering for better performance in high volume environments
    -  Updated keys for recordings and transcripts to make files easier to find
    -  Updated all functions to Python 3.13
    -  Updated logging and error handling in functions
    -  Updated view for agent guide
+   -  Updated HTML layout for email delivery
+   -  Updated packager function code to modularize key capabilities
+   -  Standardized formatting across Lambda functions
+   -  Fixed MIME type on wav files to allow for playing within browser when clicking presigned URL links
+   -  Updated test flow to include in queue option
 
 ## How it works
 With Voicemail Express, customers can have the option to leave a voicemail for an individual agent or an Amazon Connect Queue. Once the voicemail is recorded, a series of processes take place in the following order:

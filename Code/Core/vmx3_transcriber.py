@@ -16,12 +16,11 @@ current_version = '2025.09.12'
  **********************************************************************************************************************
 '''
 
-# Import the necessary modules for this function
-import json
+# Import required modules
 import boto3
-import os
+import json
 import logging
-import time
+import os
 
 # Establish logging configuration
 logger = logging.getLogger()
@@ -95,7 +94,7 @@ def lambda_handler(event, context):
 
         # Submit the transcription job
         transcribe_response = transcribe_client.start_transcription_job(
-            TranscriptionJobName='vmx3_' + contact_id + '_' + str(round(time.time())),
+            TranscriptionJobName='vmx3_' + contact_id,
             LanguageCode=loaded_tags['vmx3_lang'],
             MediaFormat='wav',
             Media={
