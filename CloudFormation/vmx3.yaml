@@ -473,7 +473,6 @@ Resources:
         EXPTemplateVersion: !Ref EXPTemplateVersion
         AWSRegion: !Ref AWSRegion
         ConnectInstanceAlias: !Ref ConnectInstanceAlias
-        ConnectRecordingsBucketArn: !Ref ConnectRecordingsBucketArn
         EnableVMToConnectTask: !Ref EnableVMToConnectTask
         EnableVMToConnectGuidedTask: !Ref EnableVMToConnectGuidedTask
         EnableVMToEmail: !Ref EnableVMToEmail
@@ -483,7 +482,6 @@ Resources:
           - 'false'
         EXPDevBucketPrefix: !Ref EXPDevBucketPrefix
         LambdaLoggingLevel: !Ref LambdaLoggingLevel
-        RecordingsExpireInXDays: !Ref RecordingsExpireInXDays
         VMEmailDefaultAgentTemplate: !If
           - AWSEmailEnabled
           - !GetAtt VMXSESSetupStack.Outputs.VMEmailDefaultAgentTemplate
@@ -526,6 +524,8 @@ Resources:
         VMXTranscriberRoleArn: !GetAtt VMXCoreStack.Outputs.VMXTranscriberRoleArn
         VMXTranscriberErrorRole: !GetAtt VMXCoreStack.Outputs.VMXTranscriberErrorRole
         VMXTranscriberErrorRoleArn: !GetAtt VMXCoreStack.Outputs.VMXTranscriberErrorRoleArn
+        VMXTimestamperRole: !GetAtt VMXCoreStack.Outputs.VMXTimestamperRole
+        VMXTimestamperRoleArn: !GetAtt VMXCoreStack.Outputs.VMXTimestamperRoleArn
         TaskRecordingLinksExpireInXDays: !Ref TaskRecordingLinksExpireInXDays
         EmailRecordingLinksExpireInXDays: !Ref EmailRecordingLinksExpireInXDays
       TemplateURL: !Join

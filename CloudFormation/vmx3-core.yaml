@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 
-Description: Deploys the Voicemail Express core components. Updated for 2024.09.01.
+Description: Deploys the Voicemail Express core components. Updated for 2025.09.12.
 
 Parameters:
   ConnectInstanceAlias:
@@ -53,14 +53,34 @@ Conditions:
     - 'yes'
 
 Resources:
-  VMXKVStoS3Role:
+  VMXRecordingProcessorRole:
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Join
         - ''
-        - - VMX3_KVS_to_S3_Role_
+        - - VMX3_Recording_Processor_Role_
           - !Ref ConnectInstanceAlias
-      Description: Provides appropriate access for the KVS to S3 function.
+      Description: Provides appropriate access for the Recording Processor function.
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  VMXTimestamperRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join
+        - ''
+        - - VMX3_Time_Stamper_Role_
+          - !Ref ConnectInstanceAlias
+      Description: Provides appropriate access for the Timestamper role to function.
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -353,12 +373,12 @@ Outputs:
     Description: Guided flow presigner role ARN
     Condition: ConnectGuidedTasksEnabled
     Value: !GetAtt VMXGuidedFlowPresignerRole.Arn
-  VMXKVStoS3Role:
-    Description: KVS to S3 role name
-    Value: !Ref VMXKVStoS3Role
-  VMXKVStoS3RoleArn:
-    Description: KVS to S3 role ARN
-    Value: !GetAtt VMXKVStoS3Role.Arn
+  VMXRecordingProcessorRole:
+    Description: Recording Processor role name
+    Value: !Ref VMXRecordingProcessorRole
+  VMXRecordingProcessorRoleArn:
+    Description: Recording Processor role ARN
+    Value: !GetAtt VMXRecordingProcessorRole.Arn
   VMXPackagerRole:
     Description: Packager role name
     Value: !Ref VMXPackagerRole
@@ -393,3 +413,9 @@ Outputs:
   VMXTranscriberErrorRoleArn:
     Description: Transcriber error handler role ARN
     Value: !GetAtt VMXTranscriberErrorRole.Arn
+  VMXTimestamperRoleArn:
+    Description: Timestamper role ARN
+    Value: !GetAtt VMXTimestamperRole.Arn
+  VMXTimestamperRole:
+    Description: Timestamper role name
+    Value: !Ref VMXTimestamperRole

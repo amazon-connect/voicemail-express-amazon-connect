@@ -66,7 +66,7 @@ Resources:
           - Effect: Allow
             Action:
               - 's3:GetObject'
-              - 's3:GeneratePresignedUrl'
+              - 's3:ListBucket'
             Resource:
               !Join
                 - ''
@@ -109,6 +109,8 @@ Resources:
           - Effect: Allow
             Action:
               - 's3:GetObject'
+              - 's3:GetObjectTagging'
+              - 's3:ListBucket'
             Resource:
               !Join
                 - ''
@@ -135,6 +137,9 @@ Resources:
               - 'connect:GetContactAttributes'
               - 'connect:UpdateContactAttributes'
               - 'connect:StartTaskContact'
+              - 'connect:ListUsers'
+              - 'connect:ListUserProficiencies'
+              - 'connect:SearchUsers'
             Resource: 
               - !Ref ConnectInstanceARN
               - !Join
@@ -191,6 +196,13 @@ Resources:
                 - ''
                 - - !Ref VMXS3TranscriptsBucketArn
                   - '/*'
+          - Effect: Allow
+            Action:
+              - bedrock:InvokeModel
+              - bedrock:InvokeModelWithResponseStream
+            Resource:
+              - arn:aws:bedrock:*::foundation-model/*
+				      - arn:aws:bedrock:*:975049916553:inference-profile/*
       ManagedPolicyName:
         !Join
           - ''
@@ -209,7 +221,7 @@ Resources:
           - Effect: Allow
             Action:
               - 's3:GetObject'
-              - 's3:GeneratePresignedUrl'
+              - 's3:ListBucket'
             Resource:
               !Join
                 - ''

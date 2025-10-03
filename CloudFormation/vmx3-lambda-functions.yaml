@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: Deploys the Voicemail Express Lambda functions. Updated for 2024.09.01.
+Description: Deploys the Voicemail Express Lambda functions. Updated for 2025.09.12.
 
 Parameters:
   EXPTemplateVersion:
@@ -15,11 +15,11 @@ Parameters:
     Type: String
   EnableVMToEmail:
     Type: String
+  EnableGenAISummary:
+    Type: String
   EXPDevBucketPrefix:
     Type: String
   LambdaLoggingLevel:
-    Type: String
-  RecordingsExpireInXDays:
     Type: String
   VMEmailDefaultAgentTemplate:
     Type: String
@@ -63,12 +63,15 @@ Parameters:
     Type: String
   VMXTranscriberErrorRole:
     Type: String
+  VMXTimestamperRoleArn:
+    Type: String
+  VMXTimestamperRole:
+    Type: String
   TaskRecordingLinksExpireInXDays:
     Type: String
   EmailRecordingLinksExpireInXDays:
     Type: String
-  EnableGenAISummary:
-    Type: String
+
 
 Mappings:
   TZInfo:
@@ -101,6 +104,40 @@ Mappings:
       mode: guided_task
     AmazonSimpleEmailService:
       mode: email
+  BedrockModel:
+    us-east-1:
+      inf_model: 'us-east-1'
+      inf_region: 'us.amazon.nova-lite-v1:0'
+    us-west-2:
+      inf_model: 'us-west-2'
+      inf_region: 'us.amazon.nova-lite-v1:0'
+    af-south-1:
+      inf_model: 'eu-west-2'
+      inf_region: 'amazon.nova-lite-v1:0'
+    ap-southeast-1:
+      inf_model: 'ap-southeast-1'
+      inf_region: 'apac.amazon.nova-lite-v1:0'
+    ap-southeast-2:
+      inf_model: 'ap-southeast-2'
+      inf_region: 'apac.amazon.nova-lite-v1:0'
+    ap-northeast-1:
+      inf_model: 'ap-northeast-1'
+      inf_region: 'apac.amazon.nova-lite-v1:0'
+    ap-northeast-2:
+      inf_model: 'ap-northeast-2'
+      inf_region: 'apac.amazon.nova-lite-v1:0'
+    ca-central-1:
+      inf_model: 'ca-central-1'
+      inf_region: 'ca.amazon.nova-lite-v1:0'
+    eu-central-1:
+      inf_model: 'eu-central-1'
+      inf_region: 'eu.amazon.nova-lite-v1:0'
+    eu-west-2:
+      inf_model: 'eu-west-2'
+      inf_region: 'amazon.nova-lite-v1:0'
+    us-gov-west-1:
+      inf_model: 'us-gov-west-1'
+      inf_region: 'us-gov.anthropic.claude-3-5-sonnet-20240620-v1:0'
 
 Conditions:
   ConnectTasksEnabled: !Equals 
@@ -142,7 +179,7 @@ Resources:
       Description: Provides dependencies code and functions for AWS Lambda functions that power Voicemail Express.
       LayerName: !Join
         - ''
-        - - 'common_python_layer_'
+        - - 'VMX3-Python-Layer-'
           - !Ref ConnectInstanceAlias
       LicenseInfo: https://aws.amazon.com/apache-2-0
 
@@ -189,7 +226,7 @@ Resources:
         SystemLogLevel: INFO
       Role: !Ref VMXPresignerRoleArn
       Runtime: python3.13
-      Timeout: 30
+      Timeout: 60
 
   VMXPackager:
     Type: AWS::Lambda::Function
@@ -222,6 +259,12 @@ Resources:
             !If [ConnectGuidedTasksEnabled, !Ref VMXDefaultGuidedTaskFlow, 'AWS::NoValue']
           package_version:
             Ref: EXPTemplateVersion
+          aws_region:
+            Ref: AWSRegion
+          inference_model:
+            Fn::FindInMap: [BedrockModel, !Ref "AWS::Region", inf_model]            
+          inference_region:
+            Fn::FindInMap: [BedrockModel, !Ref "AWS::Region", inf_region]
           TZ:
             !FindInMap [TZInfo, !Ref "AWS::Region", TZvalue]
           default_email_from:
@@ -234,7 +277,7 @@ Resources:
             !If [AWSEmailEnabled, !Ref VMEmailDefaultAgentTemplate, 'AWS::NoValue']
           default_queue_email_template:
             !If [AWSEmailEnabled, !Ref VMEmailDefaultQueueTemplate, 'AWS::NoValue']
-          enable_gen_ai_summary:
+          vmx3_do_genai_summary:
             Ref: EnableGenAISummary
           agent_email_key:
             !If [AWSEmailEnabled, !Ref VMAgentAddressKey, 'Email']
@@ -324,11 +367,11 @@ Resources:
             - ''
             - - 'VMX3-RecordingProcessor-'
               - !Ref ConnectInstanceAlias
-      Handler: vmx3_kvs_to_s3.lambda_handler
+      Handler: vmx3_recording_processor.lambda_handler
       MemorySize: 512
-      Role: !Ref VMXKVStoS3RoleArn
+      Role: !Ref VMXRecordingProcessorRoleArn
       Layers: [!Ref VMXPythonLayer]
-      Runtime: python3.12
+      Runtime: python3.13
       LoggingConfig:
         ApplicationLogLevel:
           Ref: LambdaLoggingLevel
@@ -368,7 +411,45 @@ Resources:
               - !Ref ConnectInstanceAlias
       Handler: vmx3_transcription_error_handler.lambda_handler
       Role: !Ref VMXTranscriberErrorRoleArn
-      Runtime: python3.12
+      Runtime: python3.13
+      LoggingConfig:
+        ApplicationLogLevel:
+          Ref: LambdaLoggingLevel
+        LogFormat: JSON
+        SystemLogLevel: INFO
+      Timeout: 30
+  
+  VMXTimeStamper:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          !Join
+            - ''
+            - - !Ref EXPDevBucketPrefix
+              - 'vmx-source-'
+              - !Ref AWSRegion
+        S3Key:
+          !Join
+          - ''
+          - - 'vmx3/'
+            - !Ref EXPTemplateVersion
+            - /zip/vmx3_voicemail_timestamper.py.zip
+      Description: Sets Voicemail timestamp enabling the IVR recording trim.
+      Environment:
+        Variables:
+          aws_region:
+            Ref: AWSRegion
+          package_version:
+            Ref: EXPTemplateVersion
+      FunctionName:
+        !Join
+            - ''
+            - - 'VMX3-VoicemailTimestamper-'
+              - !Ref ConnectInstanceAlias
+      Handler: vmx3_voicemail_timestamper.lambda_handler
+      Role: !Ref VMXTimestamperRoleArn
+      Runtime: python3.13
       LoggingConfig:
         ApplicationLogLevel:
           Ref: LambdaLoggingLevel
@@ -393,3 +474,6 @@ Outputs:
     Description: ARN of the presigner function
     Condition: NonGuidedOptions
     Value: !GetAtt VMXPresigner.Arn
+  VMXTimeStamperArn:
+    Description: ARN of the time stamper function
+    Value: !GetAtt VMXTimeStamper.Arn

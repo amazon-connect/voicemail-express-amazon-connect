@@ -43,8 +43,8 @@ def genai_summarizer(function_payload):
 
     # Establish Client and set model parameters
     nova_model = os.environ['inference_model']
-    aws_region = os.environ['aws_region']
-    bedrock = boto3.client('bedrock-runtime',aws_region)
+    inference_region = os.environ['inference_region']
+    bedrock = boto3.client('bedrock-runtime',inference_region)
 
     summary_prompt = 'You summarize voicemail messages left by callers. You are provided with a transcript of the voicemail. Read the transcript and summarize the content into 4-5 sentences at most. Begin the summary with who the caller is, if that can be determined from the message. Also, make sure to provide the callback number, if left in the voicemail. Your summary will not be read by customers. Be as concise as possible while still clearly articulating the key topic of the message. Your entire response should never exceed 500 characters. Here is the transcript of the voicemail: '
 

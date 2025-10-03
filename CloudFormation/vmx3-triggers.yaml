@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: Deploys the Voicemail Express content triggers. Updated for 2024.09.01
+Description: Deploys the Voicemail Express content triggers. Updated for 2025.09.12
 
 Parameters:
   EXPTemplateVersion:
@@ -9,13 +9,13 @@ Parameters:
     Type: String
   VMXS3RecordingsBucket:
     Type: String
-  VMXS3TranscriptsBucket:
-    Type: String
   VMXS3RecordingsBucketArn:
     Type: String
-  VMXPackagerArn:
+  VMXS3TranscriptsBucket:
     Type: String
   VMXS3TranscriptsBucketArn:
+    Type: String
+  VMXPackagerArn:
     Type: String
   VMXTranscriberArn:
     Type: String
@@ -30,6 +30,8 @@ Parameters:
   VMXGuidedFlowPresignerArn:
     Type: String
   EnableVMToConnectGuidedTask:
+    Type: String
+  VMXTimeStamperArn:
     Type: String
 
 Conditions:
@@ -49,11 +51,10 @@ Resources:
 
   TimestampLambdaFunctionAssociation:
     Type: AWS::Connect::IntegrationAssociation
-    Condition: ConnectGuidedTasksEnabled
     Properties:
       InstanceId: !Ref ConnectInstanceARN
       IntegrationType: LAMBDA_FUNCTION
-      IntegrationArn: !Ref VMXTimestampFunction
+      IntegrationArn: !Ref VMXTimeStamperArn
 
   RecordingsBucketPermission:
     Type: AWS::Lambda::Permission
@@ -80,7 +81,7 @@ Resources:
       BisectBatchOnFunctionError: true
       Enabled: true
       EventSourceArn: !Ref ConnectCTRStreamARN
-      FunctionName: !Ref VMXKVStoS3
+      FunctionName: !Ref VMXRecordingProcessor
       MaximumRetryAttempts: 3
       StartingPosition: LATEST
       FilterCriteria:
