@@ -198,11 +198,15 @@ Resources:
                   - '/*'
           - Effect: Allow
             Action:
-              - bedrock:InvokeModel
-              - bedrock:InvokeModelWithResponseStream
+              - 'bedrock:InvokeModel'
+              - 'bedrock:InvokeModelWithResponseStream'
             Resource:
-              - arn:aws:bedrock:*::foundation-model/*
-				      - arn:aws:bedrock:*:975049916553:inference-profile/*
+              - 'arn:aws:bedrock:*::foundation-model/*'
+              - !Join
+                - ''
+                - - 'arn:aws:bedrock:*:'
+                  - !Ref AWS::AccountId
+                  - ':inference-profile/*'
       ManagedPolicyName:
         !Join
           - ''

@@ -61,6 +61,9 @@ Resources:
         - - VMX3_Recording_Processor_Role_
           - !Ref ConnectInstanceAlias
       Description: Provides appropriate access for the Recording Processor function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -81,6 +84,9 @@ Resources:
         - - VMX3_Time_Stamper_Role_
           - !Ref ConnectInstanceAlias
       Description: Provides appropriate access for the Timestamper role to function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -102,6 +108,9 @@ Resources:
         - - VMX3_Guided_Flow_Role_
           - !Ref ConnectInstanceAlias
       Description: Provides appropriate access for the Guided Flow Presigner function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -122,6 +131,9 @@ Resources:
         - - VMX3_Packager_Role_
           - !Ref ConnectInstanceAlias
       Description: Provides appropriate access for the Packager function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -143,6 +155,9 @@ Resources:
         - - VMX3_Presigner_Role_
           - !Ref ConnectInstanceAlias
       Description: Provides appropriate access for the Presigner function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -164,6 +179,9 @@ Resources:
         - - VMX3_SES_Template_Role_
           - !Ref ConnectInstanceAlias
       Description: Provides appropriate access for the SES Template tool function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -184,6 +202,9 @@ Resources:
         - - VMX3_Transcriber_Role_
           - !Ref ConnectInstanceAlias
       Description: Provides appropriate access for the Transcriber function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -204,6 +225,9 @@ Resources:
         - - VMX3_Transcriber_Error_Role_
           - !Ref ConnectInstanceAlias
       Description: Provides appropriate access for the Transcriber function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -227,6 +251,9 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       VersioningConfiguration:
         !If
           - EnableVersioning
@@ -269,6 +296,9 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       VersioningConfiguration:
         !If
           - EnableVersioning
@@ -314,6 +344,9 @@ Resources:
       - VMXPresignerUserPolicy
     Condition: NonGuidedOptions
     Properties:
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       UserName: !Join
         - ''
         - - VMX3_Presigner_User_
@@ -343,6 +376,9 @@ Resources:
         - - VMX3_Access_Secrets_
           - !Ref ConnectInstanceAlias
       Description: Stores user credentials for the presigner function
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       SecretString: !Sub
         - '{"vmx_iam_key_id":"${KeyID}","vmx_iam_key_secret":"${KeySecret}"}'
         - KeyID: !Ref VMXUserKey

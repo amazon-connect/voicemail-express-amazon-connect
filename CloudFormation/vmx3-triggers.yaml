@@ -84,6 +84,9 @@ Resources:
       FunctionName: !Ref VMXRecordingProcessor
       MaximumRetryAttempts: 3
       StartingPosition: LATEST
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       FilterCriteria:
         Filters:
           - Pattern: "{    \"data\":{        \"Attributes\":{            \"vmx3_flag\":[\"1\"]        },        \"Recordings\":{            \"ParticipantType\":[\"IVR\"]        },        \"Agent\":[null]    }}"
@@ -103,6 +106,9 @@ Resources:
               - !Ref VMXS3RecordingsBucket
       Name: !Join [ "-", [ !Ref ConnectInstanceAlias,TranscriberRule ] ]
       State: ENABLED
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       Targets:
         - Id: !Join [ "-", [ !Ref ConnectInstanceAlias,TranscriberFunction ] ]
           Arn: !Ref VMXTranscriberArn
@@ -131,6 +137,9 @@ Resources:
               - !Ref VMXS3TranscriptsBucket
       Name: !Join [ "-", [ !Ref ConnectInstanceAlias,PackagerRule ] ]
       State: ENABLED
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       Targets: 
         - Id: !Join [ "-", [ !Ref ConnectInstanceAlias,PackagerFunction ] ]
           Arn: !Ref VMXPackagerArn
@@ -160,6 +169,9 @@ Resources:
         }
       Name: !Join [ "-", [ !Ref ConnectInstanceAlias,TranscribeErrorRule ] ]
       State: ENABLED
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       Targets: 
         - Id: !Join [ "-", [ !Ref ConnectInstanceAlias,TranscribeErrorFunction ] ]
           Arn: !Ref VMXTranscribeErrorArn

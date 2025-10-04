@@ -77,6 +77,9 @@ Resources:
         SystemLogLevel: INFO
       Role: !Ref VMXSESTemplateRoleArn
       Runtime: python3.12
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       Timeout: 30
 
 Outputs:

@@ -106,38 +106,38 @@ Mappings:
       mode: email
   BedrockModel:
     us-east-1:
-      inf_model: 'us-east-1'
-      inf_region: 'us.amazon.nova-lite-v1:0'
+      infRegion: 'us-east-1'
+      infModel: 'us.amazon.nova-lite-v1:0'
     us-west-2:
-      inf_model: 'us-west-2'
-      inf_region: 'us.amazon.nova-lite-v1:0'
+      infRegion: 'us-west-2'
+      infModel: 'us.amazon.nova-lite-v1:0'
     af-south-1:
-      inf_model: 'eu-west-2'
-      inf_region: 'amazon.nova-lite-v1:0'
+      infRegion: 'eu-west-2'
+      infModel: 'amazon.nova-lite-v1:0'
     ap-southeast-1:
-      inf_model: 'ap-southeast-1'
-      inf_region: 'apac.amazon.nova-lite-v1:0'
+      infRegion: 'ap-southeast-1'
+      infModel: 'apac.amazon.nova-lite-v1:0'
     ap-southeast-2:
-      inf_model: 'ap-southeast-2'
-      inf_region: 'apac.amazon.nova-lite-v1:0'
+      infRegion: 'ap-southeast-2'
+      infModel: 'apac.amazon.nova-lite-v1:0'
     ap-northeast-1:
-      inf_model: 'ap-northeast-1'
-      inf_region: 'apac.amazon.nova-lite-v1:0'
+      infRegion: 'ap-northeast-1'
+      infModel: 'apac.amazon.nova-lite-v1:0'
     ap-northeast-2:
-      inf_model: 'ap-northeast-2'
-      inf_region: 'apac.amazon.nova-lite-v1:0'
+      infRegion: 'ap-northeast-2'
+      infModel: 'apac.amazon.nova-lite-v1:0'
     ca-central-1:
-      inf_model: 'ca-central-1'
-      inf_region: 'ca.amazon.nova-lite-v1:0'
+      infRegion: 'ca-central-1'
+      infModel: 'ca.amazon.nova-lite-v1:0'
     eu-central-1:
-      inf_model: 'eu-central-1'
-      inf_region: 'eu.amazon.nova-lite-v1:0'
+      infRegion: 'eu-central-1'
+      infModel: 'eu.amazon.nova-lite-v1:0'
     eu-west-2:
-      inf_model: 'eu-west-2'
-      inf_region: 'amazon.nova-lite-v1:0'
+      infRegion: 'eu-west-2'
+      infModel: 'amazon.nova-lite-v1:0'
     us-gov-west-1:
-      inf_model: 'us-gov-west-1'
-      inf_region: 'us-gov.anthropic.claude-3-5-sonnet-20240620-v1:0'
+      infRegion: 'us-gov-west-1'
+      infModel: 'us-gov.anthropic.claude-3-5-sonnet-20240620-v1:0'
 
 Conditions:
   ConnectTasksEnabled: !Equals 
@@ -226,6 +226,9 @@ Resources:
         SystemLogLevel: INFO
       Role: !Ref VMXPresignerRoleArn
       Runtime: python3.13
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       Timeout: 60
 
   VMXPackager:
@@ -262,9 +265,9 @@ Resources:
           aws_region:
             Ref: AWSRegion
           inference_model:
-            Fn::FindInMap: [BedrockModel, !Ref "AWS::Region", inf_model]            
+            Fn::FindInMap: [BedrockModel, !Ref "AWS::Region", infModel]            
           inference_region:
-            Fn::FindInMap: [BedrockModel, !Ref "AWS::Region", inf_region]
+            Fn::FindInMap: [BedrockModel, !Ref "AWS::Region", infRegion]
           TZ:
             !FindInMap [TZInfo, !Ref "AWS::Region", TZvalue]
           default_email_from:
@@ -295,6 +298,9 @@ Resources:
       Role: !Ref VMXPackagerRoleArn
       Layers: [!Ref VMXPythonLayer]
       Runtime: python3.13
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       Timeout: 900
 
   VMXTranscriber:
@@ -330,6 +336,9 @@ Resources:
       Handler: vmx3_transcriber.lambda_handler
       Role: !Ref VMXTranscriberRoleArn
       Runtime: python3.13
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       LoggingConfig:
         ApplicationLogLevel:
           Ref: LambdaLoggingLevel
@@ -352,13 +361,13 @@ Resources:
           - ''
           - - 'vmx3/'
             - !Ref EXPTemplateVersion
-            - /zip/vmx3_audio_processor.py.zip
+            - /zip/vmx3_recording_processor.py.zip
       Description: Retrieves the voicemail from the IVR recording and trims as necessary.
       Environment:
         Variables:
           aws_region:
             Ref: AWSRegion
-          s3_recordings_bucket:
+          vmx3_recordings_bucket:
             Ref: VMXS3RecordingsBucket
           package_version:
             Ref: EXPTemplateVersion
@@ -372,6 +381,9 @@ Resources:
       Role: !Ref VMXRecordingProcessorRoleArn
       Layers: [!Ref VMXPythonLayer]
       Runtime: python3.13
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       LoggingConfig:
         ApplicationLogLevel:
           Ref: LambdaLoggingLevel
@@ -412,44 +424,9 @@ Resources:
       Handler: vmx3_transcription_error_handler.lambda_handler
       Role: !Ref VMXTranscriberErrorRoleArn
       Runtime: python3.13
-      LoggingConfig:
-        ApplicationLogLevel:
-          Ref: LambdaLoggingLevel
-        LogFormat: JSON
-        SystemLogLevel: INFO
-      Timeout: 30
-  
-  VMXTimeStamper:
-    Type: AWS::Lambda::Function
-    Properties:
-      Code:
-        S3Bucket:
-          !Join
-            - ''
-            - - !Ref EXPDevBucketPrefix
-              - 'vmx-source-'
-              - !Ref AWSRegion
-        S3Key:
-          !Join
-          - ''
-          - - 'vmx3/'
-            - !Ref EXPTemplateVersion
-            - /zip/vmx3_voicemail_timestamper.py.zip
-      Description: Sets Voicemail timestamp enabling the IVR recording trim.
-      Environment:
-        Variables:
-          aws_region:
-            Ref: AWSRegion
-          package_version:
-            Ref: EXPTemplateVersion
-      FunctionName:
-        !Join
-            - ''
-            - - 'VMX3-VoicemailTimestamper-'
-              - !Ref ConnectInstanceAlias
-      Handler: vmx3_voicemail_timestamper.lambda_handler
-      Role: !Ref VMXTimestamperRoleArn
-      Runtime: python3.13
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       LoggingConfig:
         ApplicationLogLevel:
           Ref: LambdaLoggingLevel
@@ -464,9 +441,9 @@ Outputs:
   VMXTranscriberArn:
     Description: ARN of the Transcriber function
     Value: !GetAtt VMXTranscriber.Arn
-  VMXKVStoS3:
-    Description: Name of the KVS to S3 function
-    Value: !Ref VMXKVStoS3
+  VMXRecordingProcessor:
+    Description: Name of the Recording Processor function
+    Value: !Ref VMXRecordingProcessor
   VMXTranscribeErrorArn:
     Description: ARN of the transcribe error handler function
     Value: !GetAtt VMXTranscribeErrorHandler.Arn
@@ -474,6 +451,3 @@ Outputs:
     Description: ARN of the presigner function
     Condition: NonGuidedOptions
     Value: !GetAtt VMXPresigner.Arn
-  VMXTimeStamperArn:
-    Description: ARN of the time stamper function
-    Value: !GetAtt VMXTimeStamper.Arn
