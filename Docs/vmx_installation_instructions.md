@@ -6,7 +6,10 @@ In order to deploy this template, you must first complete the [installation prer
 ## Gather Required Information (All deployments)
 Voicemail Express is deployed via AWS CloudFormation. In order to launch the template, you will need the following information:
 -  ARN for the Amazon Kinesis data stream used for streaming your CTRs from the [Amazon Kinesis Data streams console](https://console.aws.amazon.com/kinesis/home)
-   - **IMPORTANT NOTE:** This solution is designed to receive CTRs via Kinesis Data Streams only, not Kinesis Firehose. It WILL NOT work with a Kinesis firehose.
+
+> [!Important] 
+> This solution is designed to receive CTRs via Kinesis Data Streams only, not Kinesis Firehose. It WILL NOT work with a Kinesis firehose.
+
 -  Amazon Connect Instance Alias from the [Amazon Connect console](https://console.aws.amazon.com/connect/home)
 -  Amazon Connect Instance ARN from the [Amazon Connect console](https://console.aws.amazon.com/connect/home)
 -  Amazon Connect Call Recordings bucket ARN
