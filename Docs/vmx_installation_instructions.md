@@ -9,7 +9,7 @@ Voicemail Express is deployed via AWS CloudFormation. In order to launch the tem
    - **IMPORTANT NOTE:** This solution is designed to receive CTRs via Kinesis Data Streams only, not Kinesis Firehose. It WILL NOT work with a Kinesis firehose.
 -  Amazon Connect Instance Alias from the [Amazon Connect console](https://console.aws.amazon.com/connect/home)
 -  Amazon Connect Instance ARN from the [Amazon Connect console](https://console.aws.amazon.com/connect/home)
--  Kinesis Video Streams prefix for the Amazon Connect Instance ARN from the [Amazon Connect console](https://console.aws.amazon.com/connect/home)
+-  Amazon Connect Call Recordings bucket ARN
 -  Default agent ID to use for testing
 -  Default queue ARN to use for testing
 
@@ -54,8 +54,8 @@ If you have deployed Voicemail Express with the Amazon Connect Guided Tasks deli
 1.  **Dial** the phone number you configured for the Voicemail Test Line.
 1.  At the first menu, **press 2** to select Task delivery.
 1.  At the next menu, **press 1** to leave a voicemail for an agent or **press 2** to leave a voicemail for a queue.
+1.  Select the appropiate option to enable the generative AI summary, if desired.
 1.  When you hear the tone, **record your voicemail**. Hang up at any time after recording a message.
-    - **NOTE:** If you have just enabled KVS on your instance for the first time, you may hear an error message. Simply hang up and try again. It should work the second time. KVS streams are not created until first use, which will throw an error in your contact flow.
 1.  Once you have completed the recording, **wait approximately 2 minutes**.
 1.  Log the appropriate agent in **to the agent workspace or a custom CCP with guides enabled** and put them into the available state. The Guided Task should arrive shortly.
 
@@ -64,8 +64,8 @@ If you have deployed Voicemail Express with the Amazon Connect Tasks delivery op
 1.  **Dial** the phone number you configured for the Voicemail Test Line.
 1.  At the first menu, **press 1** to select Task delivery.
 1.  At the next menu, **press 1** to leave a voicemail for an agent or **press 2** to leave a voicemail for a queue.
+1.  Select the appropiate option to enable the generative AI summary, if desired.
 1.  When you hear the tone, **record your voicemail**. Hang up at any time after recording a message.
-    - **NOTE:** If you have just enabled KVS on your instance for the first time, you may hear an error message. Simply hang up and try again. It should work the second time. KVS streams are not created until first use, which will throw an error in your contact flow.
 1.  Once you have completed the recording, **wait approximately 2 minutes**.
 1.  Log the appropriate agent in and put them into the available state. The Task should arrive shortly.
 
@@ -74,9 +74,19 @@ If you have deployed Voicemail Express with the email delivery option, you can v
 1.  **Dial** the phone number you configured for the Voicemail Test Line.
 1.  At the first menu, **press 3** to select email delivery.
 1.  At the next menu, **press 1** to leave a voicemail for an agent or **press 2** to leave a voicemail for a queue.
+1.  Select the appropiate option to enable the generative AI summary, if desired.
 1.  When you hear the tone, **record your voicemail**. Hang up at any time after recording a message.
-    - **NOTE:** If you have just enabled KVS on your instance for the first time, you may hear an error message. Simply hang up and try again. It should work the second time. KVS streams are not created until first use, which will throw an error in your contact flow.
 1.  Once you have completed the recording, **wait approximately 2 minutes**.
 1.  Access the appropriate email box to verify delivery of the voicemail.
+
+## Test Voicemail Delivery as an Amazon Connect Task with the In Queue Voicemail
+If you have deployed Voicemail Express with the Amazon Connect Tasks delivery option, you can validate the In-Queue experience by performing the following test.
+1.  **Dial** the phone number you configured for the Voicemail Test Line.
+1.  At the first menu, **press 4** to select Task delivery.
+1.  At the next menu, **press 1** to leave a voicemail.
+1.  Select the appropiate option to enable the generative AI summary, if desired.
+1.  When you hear the tone, **record your voicemail**. Hang up at any time after recording a message.
+1.  Once you have completed the recording, **wait approximately 2 minutes**.
+1.  Log the appropriate agent in and put them into the available state. The Task should arrive shortly.
 
 **Voicemail Validation is complete!**

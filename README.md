@@ -4,15 +4,24 @@ Voicemail Express is designed to provide basic voicemail functionality to Amazon
 ![Voicemail Express Architecture](Docs/Img/vmx3_20250912.png)
 
 ## What's new in VMX3 (2025.09.12)
--  **New Features**
-   -  Uses Amazon Connect's built-in IVR recording option to reduce complexity, increase compatability, and remove KVS for all deployments
-   -  Deployment option for GovCloud Implementations
-   -  Changes agent voicemail from using personal queues to preferred-agent routing to eliminate over-prioritization of voicemails
-   -  Added option for generative AI summary of voicemail
+### New Features
+**New Recording Process**
+Switched to built-in Amazon Connect IVR recording. KVS is no longer used or required. Removes the costs and complexities of the KVS solution. Built-in IVR recording provides a faster, more scalable option. New VMXT3-Voicemail-Timestamper Lambda function marks the time that voicemail recording started so that the solution still works in environemnts where 100% IVR recording is also in use. 
+**Generative AI Summary Option**
+Provides the option to generate a summary of the voicemail using generative AI. This helps users more quickly identify who called, why, and how to get in touch with them. Option can be toggled on a call by call basis, and also set as an instance default. Default model for all regions except GovCloud is Nova Lite. GovCloud uses Claude Sonnet.
+**Better Direct Agent Routing**
+Uses the preferred agent routing criteria option instead of using agent personal queues. This makes it easier for managers to re-allocate voicemail in the event of an agent being unavailble for extended periods, and also preserves queue reporting data, while still allowing for personal engagement for agents with direct customer relationships. 
+**Deploy to Govcloud**
+With the change from KVS, all solution components are now available in GovCloud.
+**Added In Queue Voicemail Option**
+Provided example flows and added in-queue voicemail option to the main test flow.
+
 -  **Security Enhancements**: 
    -  Support for bucket versioning
+   -  Validated operation with customer-managed KMS keys. Documented setup changes.
 -  **Performance Validation**:
-   -  Validated functionality for voicemails up to 25 minutes long
+   -  Validated functionality for voicemails up to 25 minutes long, including generative summary
+   -  Load tested voicemail capabilities up to 2000 voicemails per hour
 -  **Example Flows**:
    -  Sample queue flow demonstrating how to cleanly do an uninterruptable voicemail while in a queue flow
    -  Sample agent whisper flow which removes the voicemail flag when an agent is connected to a caller who was leaving a voicemail
@@ -29,9 +38,10 @@ Voicemail Express is designed to provide basic voicemail functionality to Amazon
    -  Updated view for agent guide
    -  Updated HTML layout for email delivery
    -  Updated packager function code to modularize key capabilities
+   -  Added tags to all taggable resources fior better administration and monitoring
+   -  Added tagging to voicemail contacts to provide more controlled access to tasks in self-service modes
    -  Standardized formatting across Lambda functions
    -  Fixed MIME type on wav files to allow for playing within browser when clicking presigned URL links
-   -  Updated test flow to include in queue option
 
 ## How it works
 With Voicemail Express, customers can have the option to leave a voicemail for an individual agent or an Amazon Connect Queue. Once the voicemail is recorded, a series of processes take place in the following order:
@@ -74,7 +84,8 @@ Finally, a list of recent changes be found on the [Changelog](Docs/vmx_changelog
 The following items are currently planned for future releases. Changes to roadmap depend on feedback, however one overarching tenet of Voicemail Express is to keep the solution lightweight, with a minimal number of required services and administration, and to replace functionality with native Amazon Connect features as soon as they become available. 
 
 -  Reduce dependence on services external to Amazon Connect
--  
+-  Move to Contact Lens-generated transcriptions once available with IVR recordings
+-  Include recordings as attachments to Tasks once available, removing the need for presigned URLs on task-based voicemails
 
 ## Current Published Version
 ### 2025.09.12

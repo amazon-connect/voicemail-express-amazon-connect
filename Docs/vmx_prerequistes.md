@@ -2,7 +2,10 @@
 Before deploying the Voicemail Express, you will need to complete a few prerequisites. These will ensure that your Amazon Connect instance is ready for Voicemail Express. These **must be completed** prior to the deployment and use of Voicemail Express.
 
 -  [Contact records streaming via Amazon Kinesis Data Stream](https://docs.aws.amazon.com/connect/latest/adminguide/data-streaming.html) (Amazon Kinesis Data Firehose is not supported)
--  [Amazon Nova Lite enabled in Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access-modify.html) (Only required if you want to enable generative AI summaries of voicemail.)
+-  [Amazon Nova Lite & Claude Sonnect 3.5 (For GovCloud) enabled in Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access-modify.html) (Only required if you want to enable generative AI summaries of voicemail.)
+| :warning: NOTE         |
+|:---------------------------|
+| Model access for all models will be allowed by default on AWS accounts beginning Oct 8, 2025|
 
 ## Delivery mode specific prerequisites
 ### Setup steps for Amazon Connect Task or Guided Task delivery

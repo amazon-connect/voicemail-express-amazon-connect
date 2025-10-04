@@ -42,9 +42,9 @@ Create a new template:
 {
   "mode":"create",
   "template_name":"NewAgent",
-  "template_subject":"This is a new voicemail from {{callback_number}}.",
-  "template_text":"Dear {{entity_name}}, You have a new voicemail from {{callback_number}}. You can listen to the message via the following URL: {{presigned_url}}",
-  "template_html":"<h1>Voicemail for {{entity_name}} </h1><p>You have a new voicemail from {{callback_number}}.</p><p><a href=\"{{presigned_url}}\">Listen to the voicemail.</a></p><h2>Voicemail transcription</h2><p>{{transcript_contents}}</p>"
+  "template_subject":"New Amazon Connect Voicemail",
+  "template_text":"Dear {{entity_name}}, A voicemail was left for you from {{callback_number}}. You can listen to the message via the following URL: {{presigned_url}}.",
+  "template_html":"<div style="width: 100%; height: 80px; background-color: #415266; display: flex; align-items: center; padding-left: 5px; clear: both;font-family: sans-serif"><img src="https://raw.githubusercontent.com/amazon-connect/voicemail-express-amazon-connect/refs/heads/main/Docs/Img/connect.png" alt="Logo" style="max-height: 70px; width: auto;" /><h3 style="color: white; margin-left: 10px; font-size: 24px; font-family: sans-serif"> Amazon Connect Voicemail </h3></div><p style="font-family: sans-serif">You have a new voicemail from {{vmx3_from}}.</p><p style="font-family: sans-serif"><a href="{{vmx3_presigned_url}}">Listen to the voicemail.</a></p><h3 style="font-family: sans-serif">Generative AI Summary:</h3><p style="font-family: sans-serif">{{vmx3_genai_summary}}</p><h3 style="font-family: sans-serif">Voicemail Transcript:</h3><p style="font-family: sans-serif">{{vmx3_transcript_contents}}</p>"
 }
 ```
 Get an existing template:
@@ -60,9 +60,9 @@ Update an existing template:
 {
   "mode":"update",
   "template_name":"NewAgent",
-  "template_subject":"This is a super new voicemail from {{callback_number}}.",
-  "template_text":"Dear {{entity_name}}, You have a new voicemail from {{callback_number}}. The recording can be found here: {{presigned_url}}",
-  "template_html":"<h1>Fresh Voicemail for {{entity_name}} </h1><p>You have a new voicemail from {{callback_number}}.</p><p><a href=\"{{presigned_url}}\">Listen to the voicemail.</a></p><h2>Voicemail transcription</h2><p>{{transcript_contents}}</p>"
+  "template_subject":"New Amazon Connect Voicemail",
+  "template_text":"Dear {{entity_name}}, A voicemail was left for you from {{callback_number}}. You can listen to the message via the following URL: {{presigned_url}}.",
+  "template_html":"<div style="width: 100%; height: 80px; background-color: #415266; display: flex; align-items: center; padding-left: 5px; clear: both;font-family: sans-serif"><img src="https://raw.githubusercontent.com/amazon-connect/voicemail-express-amazon-connect/refs/heads/main/Docs/Img/connect.png" alt="Logo" style="max-height: 70px; width: auto;" /><h3 style="color: white; margin-left: 10px; font-size: 24px; font-family: sans-serif"> Amazon Connect Voicemail </h3></div><p style="font-family: sans-serif">You have a new voicemail from {{vmx3_from}}.</p><p style="font-family: sans-serif"><a href="{{vmx3_presigned_url}}">Listen to the voicemail.</a></p><h3 style="font-family: sans-serif">Generative AI Summary:</h3><p style="font-family: sans-serif">{{vmx3_genai_summary}}</p><h3 style="font-family: sans-serif">Voicemail Transcript:</h3><p style="font-family: sans-serif">{{vmx3_transcript_contents}}</p>"
 }
 ```
 
