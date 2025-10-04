@@ -7,12 +7,16 @@ Voicemail Express is designed to provide basic voicemail functionality to Amazon
 ### New Features
 **New Recording Process**
 Switched to built-in Amazon Connect IVR recording. KVS is no longer used or required. Removes the costs and complexities of the KVS solution. Built-in IVR recording provides a faster, more scalable option. New VMXT3-Voicemail-Timestamper Lambda function marks the time that voicemail recording started so that the solution still works in environemnts where 100% IVR recording is also in use. 
+
 **Generative AI Summary Option**
 Provides the option to generate a summary of the voicemail using generative AI. This helps users more quickly identify who called, why, and how to get in touch with them. Option can be toggled on a call by call basis, and also set as an instance default. Default model for all regions except GovCloud is Nova Lite. GovCloud uses Claude Sonnet.
+
 **Better Direct Agent Routing**
 Uses the preferred agent routing criteria option instead of using agent personal queues. This makes it easier for managers to re-allocate voicemail in the event of an agent being unavailble for extended periods, and also preserves queue reporting data, while still allowing for personal engagement for agents with direct customer relationships. 
+
 **Deploy to Govcloud**
 With the change from KVS, all solution components are now available in GovCloud.
+
 **Added In Queue Voicemail Option**
 Provided example flows and added in-queue voicemail option to the main test flow.
 
