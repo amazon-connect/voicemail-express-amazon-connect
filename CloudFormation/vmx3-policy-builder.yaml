@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: Updates the VMX roles with appropriate policies. Updated for 2024.09.01.
+Description: Updates the VMX roles with appropriate policies. Updated for 2025.09.12.
 
 Parameters:
   ConnectInstanceAlias:

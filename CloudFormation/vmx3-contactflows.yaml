@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Deploys the Voicemail Express contact flows, as required. Updated for 2024.09.01.
+Description: Deploys the Voicemail Express contact flows, as required. Updated for 2025.09.12.
 
 Parameters:
   EXPTemplateVersion:
