@@ -37,8 +37,8 @@ The next step is to deploy the CloudFormation template. This template builds all
     - eu-central-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=eu-central-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-eu-central-1.s3.eu-central-1.amazonaws.com/vmx3/2025.09.12/cloudformation/vmx3.yaml)
     - eu-west-2 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=eu-west-2#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-eu-west-2.s3.eu-west-2.amazonaws.com/vmx3/2025.09.12/cloudformation/vmx3.yaml)
 
-> [!IMPORTANT]
-> For GovCloud deployments, please follow the [GovCloud Deployment Instructions](/Docs/vmx_govcloud_deployments.md).
+    > [!IMPORTANT]
+    > For GovCloud deployments, please follow the [GovCloud Deployment Instructions](/Docs/vmx_govcloud_deployments.md).
 
 1.  Verify that the **Amazon S3 URL** is for the same region you are deploying to, then select **Next**
 1.  Update the stack name to include your instance alias, for example such as `VMX3-MyInstanceName`
