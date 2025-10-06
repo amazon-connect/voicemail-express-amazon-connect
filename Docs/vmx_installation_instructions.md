@@ -38,14 +38,14 @@ The next step is to deploy the CloudFormation template. This template builds all
     - eu-west-2 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=eu-west-2#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-eu-west-2.s3.eu-west-2.amazonaws.com/vmx3/2025.09.12/cloudformation/vmx3.yaml)
 > [!IMPORTANT]
 > For GovCloud deployments, please follow the [GovCloud Deployment Instructions](/Docs/vmx_govcloud_deployments.md).
-1.  Verify that the **Amazon S3 URL** is for the same region you are deploying to, then select **Next**
-1.  Update the stack name to include your instance alias, for example such as `VMX3-MyInstanceName`
-1.  **Complete the parameters** using the information that you have gathered.
-1.  Once the parameters are complete, choose **Next**
-1. 	Scroll to the bottom and select **Next**
-1. 	Scroll to the bottom, select the boxes to **acknowledge that IAM resources will be created**
-1.  Select **Submit**
-1.  The deployment will take 3-5 minutes. During this time, multiple nested stacks will be deployed. Once the main stack shows **CREATE_COMPLETE**, you are ready to proceed.
+3.  Verify that the **Amazon S3 URL** is for the same region you are deploying to, then select **Next**
+3.  Update the stack name to include your instance alias, for example such as `VMX3-MyInstanceName`
+3.  **Complete the parameters** using the information that you have gathered.
+3.  Once the parameters are complete, choose **Next**
+3. 	Scroll to the bottom and select **Next**
+3. 	Scroll to the bottom, select the boxes to **acknowledge that IAM resources will be created**
+3.  Select **Submit**
+3.  The deployment will take 3-5 minutes. During this time, multiple nested stacks will be deployed. Once the main stack shows **CREATE_COMPLETE**, you are ready to proceed.
 
 ## Assign a test number
 1.  Login to the Amazon Connect administration interface
