@@ -10,11 +10,12 @@ When new versions of Voicemail Express are release, you can easily upgrade to th
 1.  Navigate to the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation/home).
 1.  Make sure that you are in the correct region for your deployment.
 1.  Select **Stacks**, then choose the Voicemail Express stack that you deployed. If you don't recall the name, the description should include **Voicemail Express**.
-1.  Choose **Update**.
+1.  Choose **Update stack**, then choose **Make a direct update**.
 1.  Select the option to **Replace existing template**, then choose **Upload a template file**.
 1.  Select **Choose file**.
 1.  Navigate to the **vmx3.yaml** file that you downloaded previously and choose **Open**.
-1.  Wait a moment for the S3 URL to update, then find the parameter field labeled **(ADVANCED USE ONLY) What is version you wish to deploy?**.
+1.  Wait a moment for the S3 URL to update, then select **Next**.
+1.  Find the parameter field labeled **(ADVANCED USE ONLY) What is version you wish to deploy?**.
 1.  Change that value to the latest version available. You can find the latest version at the end of the [README](https://github.com/amazon-connect/voicemail-express-amazon-connect) page.
 1.  There may have been additional fields and changes. Please validate/update all other fields as well.
 1.  Once the parameters are filled out, choose **Next**

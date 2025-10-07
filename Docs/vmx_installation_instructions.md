@@ -42,8 +42,8 @@ The next step is to deploy the CloudFormation template. This template builds all
 3.  Update the stack name to include your instance alias, for example such as `VMX3-MyInstanceName`
 3.  **Complete the parameters** using the information that you have gathered.
 3.  Once the parameters are complete, choose **Next**
-3. 	Scroll to the bottom and select **Next**
 3. 	Scroll to the bottom, select the boxes to **acknowledge that IAM resources will be created**
+3. 	Scroll to the bottom and select **Next**
 3.  Select **Submit**
 3.  The deployment will take 3-5 minutes. During this time, multiple nested stacks will be deployed. Once the main stack shows **CREATE_COMPLETE**, you are ready to proceed.
 
