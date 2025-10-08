@@ -2,7 +2,7 @@
 Below are some common problems customers have encountered with the appropriate resolution.
 
 ## General troubleshooting tips
--  If you are experiencing issues, set the logging level of the Lambda functions to DEBUG. You can change this setting by going to the 4 core functions (VMXKVStoS3, VMXTranscriber, VMXPackager, VMXPresigner) and changing the application logging level to `DEBUG`. This will provide the most detail. Refer to the [Configuring advanced logging controls for Lambda functions](https://docs.aws.amazon.com/lambda/latest/dg/monitoring-cloudwatchlogs-advanced.html) section of the AWS Lambda guide for more details.
+-  If you are experiencing issues, set the logging level of the Lambda functions to DEBUG. You can change this setting by going to the 4 core functions (VMXRecordingProcessor, VMXTranscriber, VMXPackager, VMXPresigner) and changing the application logging level to `DEBUG`. This will provide the most detail. Refer to the [Configuring advanced logging controls for Lambda functions](https://docs.aws.amazon.com/lambda/latest/dg/monitoring-cloudwatchlogs-advanced.html) section of the AWS Lambda guide for more details.
 -  The flow of events, at a high level, is:
     -  CTR is emitted
     -  VMXRecordingProcesser function
@@ -29,3 +29,7 @@ Make sure that you remove the test flow from any phone numbers in your Amazon Co
 
 ### The VMXCoreStack fails to delete, causing the parent stack to fail as well.
 If there are any files in the S3 buckets created by the stack, the delete will fail intentionally. You must decide what to do with your files. You can opt to delete them, move them, or re-run the delete, choosing the option to keep the bucket resources. If you delete them or move them, re-run the delete and it should succeed.
+
+## Upgrade Issues
+### THe upgrade succeeded but the voicemails are not being delivered. VMXRecordingProcessor function fails at step 1.
+When upgrading from previous versions, make sure to complete the cloudformation template parameters. In older versions, access to the Amazon Connect recording store was not necessary. That was added in 2025.09.12. If you did not include the recording bucket ARN in the template, the solution will fail. Re-run the update, making sure to complete the parameters.

@@ -36,4 +36,4 @@ For queues, the solution is designed to extract the email address from the queue
 1.  Save the queue
 
 ## Prerequisites Complete
-You have completed the prerequisites for Voicemail Express. You may now proceed to the [installation instructions](vmx_installation_instructions.md).
+You have completed the prerequisites for Voicemail Express. You may now proceed to the [installation instructions](vmx_installation_instructions.md) for all regions except GovCloud. For GovCLoud deployments, complete the [Voicemail Express Installation for GovCLoud](Docs/vmx_govcloud_deployments.md).

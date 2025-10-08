@@ -65,7 +65,8 @@ Voicemail presigned URLs are configured for a maximum length of 7 days. After 7 
 ### How to deploy
 To deploy Voicemail Express, you will need to complete the following:
 1. Complete the [Voicemail Express Prerequisites](Docs/vmx_prerequistes.md)
-1. Complete the [Voicemail Express Installation](Docs/vmx_installation_instructions.md)
+1. Complete the [Voicemail Express Installation](Docs/vmx_installation_instructions.md) (all regions EXCEPT GovCloud)
+1. Complete the [Voicemail Express Installation](Docs/vmx_govcloud_deployments.md) (For GovCloud)
 
 ### How to upgrade
 To upgrade Voicemail Express, follow the [Upgrade Your Installation](Docs/vmx_upgrade.md) instructions.
@@ -75,19 +76,24 @@ To remove Voicemail Express follow the instructions below:
 1.  [Removing/Uninstalling Voicemail Express](Docs/vmx_uninstall.md)
 
 ## Using Voicemail Express
-Once Voicemail Express has been deployed, you can learn more about it by reading the [High-level overview of the Voicemail Express solution](Docs/vmx_core.md). 
+Once Voicemail Express has been deployed, you can learn more about the core functions and additional options by reading the documentation below.
 
-If your primary delivery model is Amazon Connect Guided Tasks, you can learn more about that model [here](Docs/vmx_guided_tasks.md). (This is the default)
+### Core Capabilities
+-  [High-level overview of the Voicemail Express solution](Docs/vmx_core.md)
+-  [More about the Amazon Connect Guided Tasks delivery mode](Docs/vmx_guided_tasks.md)
+-  [More abnout the Amazon Connect Tasks delivery mode](Docs/vmx_tasks.md)
+-  [More abnout the email delivery mode](Docs/vmx_email.md)
 
-If your primary delivery model is Amazon Connect Tasks, you can learn more about that model [here](Docs/vmx_tasks.md). 
+### Additional Options
+-  [Allow agents to self-service voicemails](Docs/vmx_selfserve.md)
+-  [Present voicemail options to customers in queue](Docs/vmx_inqvm.md)
+-  [Give customers more time to leave voicemail messages](Docs/vmx_longer_messages.md)
+-  [Configure customer-managed KMS keys for buckets and streams](Docs/vmx_cmkms.md)
 
-If your deployment model is email, you can learn more about that model [here](Docs/vmx_email.md).
-
-Basic troubleshooting steps can be found on the [Troubleshooting Common Voicemail Issues](Docs/vmx_troubleshooting.md) page.
-
-You can also read about the available [support options](Docs/vmx_support.md).
-
-Finally, a list of recent changes be found on the [Changelog](Docs/vmx_changelog.md) page.
+## Troubleshooting, Support, and Changelog
+-  [Troubleshooting Common Voicemail Issues](Docs/vmx_troubleshooting.md)
+-  [How to get support](Docs/vmx_support.md)
+-  [View the change log](Docs/vmx_changelog.md)
 
 ## Roadmap
 The following items are currently planned for future releases. Changes to roadmap depend on feedback, however one overarching tenet of Voicemail Express is to keep the solution lightweight, with a minimal number of required services and administration, and to replace functionality with native Amazon Connect features as soon as they become available. 
