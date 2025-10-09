@@ -33,11 +33,20 @@ During the deployment, several AWS Lambda functions will be deployed. The code f
 1.  Download the [full VMX deployment package zip file](https://vmx-source-us-gov-west-1.s3.us-west-2.amazonaws.com/vmx3_version_2025.09.12.zip).
 1.  Extract the top-level contents of the file and upload the version folder to the new folder you created in your S3 bucket. The contents of the folder should resemble the image below:
 ![S3 Object Structure](Img/vmx3_zip_structure.png)
+1. ** Copy the Object URL for the vmx3.yaml file** (Example below)
+![S3 Object URL](Img/vmx3_s3_object_url.png)
+
+> [!IMPORTANT]  
+> The preceeding step is critical. The solution is deploying from resources in your environment. Do not attempt to deploy to govcloud from the standard template. The deployment will fail.
+
+
+## Deploy the solution
 1.  In the `cloudformation` folder, find the `vmx3.yaml` file. 
 1.  Open the [AWS Console](https://console.aws.amazon.com).
 1.  Navigate to **CloudFormation**.
 1.  Select **Create stack** and choose **With new resources (standard)**.
-1.  3.  Update the stack name to include your instance alias, for example such as `VMX3-MyInstanceName`
+1.  In the **Specify template** section, select **Amazon S3 URL** and paste the Object URL for the vmx3.yaml file that you copied in the previous step.
+1.  Update the stack name to include your instance alias, for example such as `VMX3-MyInstanceName`
 3.  **Complete the parameters** using the information that you have gathered.
 3.  In the **7. Advanced Settings - Use only in customized deployments** section, set the **(ADVANCED/GovCloud USE ONLY) What is the bucket prefix for your custom code S3 bucket?** field, enter the bucket prefix that you used earlier when creating your bucket, followed by a hyphen. For example, if your bucket prefix was `mygovcloud`, you would enter `mygovcloud-`
 3.  Once the parameters are complete, choose **Next**

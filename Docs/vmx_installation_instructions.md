@@ -24,6 +24,8 @@ Once you have the required information, you are ready to continue with the deplo
 
 ## Delploy the Cloudformation Template
 The next step is to deploy the CloudFormation template. This template builds all of the AWS resources required to make Voicemail Express work.
+> [!IMPORTANT]
+> For GovCloud deployments, please follow the [GovCloud Deployment Instructions](/Docs/vmx_govcloud_deployments.md).
 1.  Open a new browser tab and then log into the [AWS console](https://console.aws.amazon.com/console/home). Be sure to set your region to match the region you have deployed Amazon Connect to, then return here.
 1.  Select the link below that matches your region to launch the template:
     - us-east-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-us-east-1.s3.us-east-1.amazonaws.com/vmx3/2025.09.12/cloudformation/vmx3.yaml)
@@ -36,16 +38,14 @@ The next step is to deploy the CloudFormation template. This template builds all
     - ca-central-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=ca-central-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-ca-central-1.s3.ca-central-1.amazonaws.com/vmx3/2025.09.12/cloudformation/vmx3.yaml)
     - eu-central-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=eu-central-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-eu-central-1.s3.eu-central-1.amazonaws.com/vmx3/2025.09.12/cloudformation/vmx3.yaml)
     - eu-west-2 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=eu-west-2#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-eu-west-2.s3.eu-west-2.amazonaws.com/vmx3/2025.09.12/cloudformation/vmx3.yaml)
-> [!IMPORTANT]
-> For GovCloud deployments, please follow the [GovCloud Deployment Instructions](/Docs/vmx_govcloud_deployments.md).
-3.  Verify that the **Amazon S3 URL** is for the same region you are deploying to, then select **Next**
-3.  Update the stack name to include your instance alias, for example such as `VMX3-MyInstanceName`
-3.  **Complete the parameters** using the information that you have gathered.
-3.  Once the parameters are complete, choose **Next**
-3. 	Scroll to the bottom, select the boxes to **acknowledge that IAM resources will be created**
-3. 	Scroll to the bottom and select **Next**
-3.  Select **Submit**
-3.  The deployment will take 3-5 minutes. During this time, multiple nested stacks will be deployed. Once the main stack shows **CREATE_COMPLETE**, you are ready to proceed.
+1.  Verify that the **Amazon S3 URL** is for the same region you are deploying to, then select **Next**
+1.  Update the stack name to include your instance alias, for example such as `VMX3-MyInstanceName`
+1.  **Complete the parameters** using the information that you have gathered.
+1.  Once the parameters are complete, choose **Next**
+1. 	Scroll to the bottom, select the boxes to **acknowledge that IAM resources will be created**
+1. 	Scroll to the bottom and select **Next**
+1.  Select **Submit**
+1.  The deployment will take 3-5 minutes. During this time, multiple nested stacks will be deployed. Once the main stack shows **CREATE_COMPLETE**, you are ready to proceed.
 
 ## Assign a test number
 1.  Login to the Amazon Connect administration interface
