@@ -20,8 +20,8 @@ When new versions of Voicemail Express are release, you can easily upgrade to th
 1.  There may have been additional fields and changes. Please validate/update all other fields as well.
 >   [!IMPORTANT]  
 >   When updating from aversion before 2025.09.12, you MUST provide the bucket that Amazon Connect uses to store recordings. 
-1.  Once the parameters are filled out, choose **Next**
-1. 	Scroll to the bottom and select **Next**
-1. 	Scroll to the bottom, select the boxes to **acknowledge that IAM resources will be created**
-1.  Select **Submit**
-1.  The deployment will take 3-5 minutes. During this time, multiple nested stacks will be deployed. Once the main stack shows **UPDATE_COMPLETE**, your deployment of Voicemail Express is complete.
+14.  Once the parameters are filled out, choose **Next**
+14. 	Scroll to the bottom and select **Next**
+14. 	Scroll to the bottom, select the boxes to **acknowledge that IAM resources will be created**
+14.  Select **Submit**
+14.  The deployment will take 3-5 minutes. During this time, multiple nested stacks will be deployed. Once the main stack shows **UPDATE_COMPLETE**, your deployment of Voicemail Express is complete.
