@@ -26,7 +26,7 @@ Once you have the required information, you are ready to continue with the deplo
 During the deployment, several AWS Lambda functions will be deployed. The code for those functions is in ZIP files stored in S3. The bucket must be in the same region as your Amazon Connect instances. For typical deployments, those ZIP files are stored in public-facing buckets. In GovCloud deployments, we prefer to home the Zip files and cloud formation templates within the same account. This also allows for better control of the resources, as well as provides you with the opportunity to run virus/security scans against those resources if desired.
 
 1.  Create a new S3 bucket that follows this naming convention:
-    -  unique prefix name + -vmx-source-us-gov-west-1
+    -  unique prefix name + vmx-source-us-gov-west-1
     -  FOR EXAMPLE: vmxdougjaso-vmx-source-us-gov-west-1
     -  Make sure to remember your prefix
 1.  Once created, create a new folder named `vmx3` in the new bucket
@@ -47,8 +47,8 @@ During the deployment, several AWS Lambda functions will be deployed. The code f
 1.  Select **Create stack** and choose **With new resources (standard)**.
 1.  In the **Specify template** section, select **Amazon S3 URL** and paste the Object URL for the vmx3.yaml file that you copied in the previous step.
 1.  Update the stack name to include your instance alias, for example such as `VMX3-MyInstanceName`
-3.  **Complete the parameters** using the information that you have gathered.
-3.  In the **7. Advanced Settings - Use only in customized deployments** section, set the **(ADVANCED/GovCloud USE ONLY) What is the bucket prefix for your custom code S3 bucket?** field, enter the bucket prefix that you used earlier when creating your bucket, followed by a hyphen. For example, if your bucket prefix was `mygovcloud`, you would enter `mygovcloud-`
+3.  In the **1. Environment Configuration** section, set the **What is the prefix for your deployment bucket?** field, enter the bucket prefix that you used earlier when creating your bucket. For example, if your bucket name was `mygovcloud-vmx-source-us-gov-west-1`, you would enter `mygovcloud-`
+3.  **Complete the remaining parameters** using the information that you have gathered.
 3.  Once the parameters are complete, choose **Next**
 3. 	Scroll to the bottom and select **Next**
 3. 	Scroll to the bottom, select the boxes to **acknowledge that IAM resources will be created**

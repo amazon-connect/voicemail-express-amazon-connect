@@ -20,7 +20,7 @@
 -  Updated Agent View when using guided tasks option
 -  Added tagging to all resources
 -  Added tagging to contacts
--  fixed the MIME type to imporve broswser playback compatability
+-  Fixed the MIME type to imporve broswser playback compatability
 
 ## 2024.09.01
 -  Added guided task option, visualizing a player, and obfuscating short lived URL
