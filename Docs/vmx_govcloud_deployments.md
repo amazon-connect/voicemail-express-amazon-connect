@@ -41,7 +41,6 @@ During the deployment, several AWS Lambda functions will be deployed. The code f
 
 
 ## Deploy the solution
-1.  In the `cloudformation` folder, find the `vmx3.yaml` file. 
 1.  Open the [AWS Console](https://console.aws.amazon.com).
 1.  Navigate to **CloudFormation**.
 1.  Select **Create stack** and choose **With new resources (standard)**.
