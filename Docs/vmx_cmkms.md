@@ -16,4 +16,22 @@ You will need to create a policy that includes:
 -  kms:Decrypt
 -  kms:GenerateDataKey
 
+## Example Policy
+```
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Sid": "VisualEditor0",
+			"Effect": "Allow",
+			"Action": [
+				"kms:Decrypt",
+				"kms:GenerateDataKey"
+			],
+			"Resource": "arn:aws:kms:us-east-1:%YOURACCOUNT%:key/%YOUR_KEY_ID%"
+		}
+	]
+}
+```
+
 Use the [least-privilege permissions](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#grant-least-privilege) required, limiting the access to the specific key(s) and resources. 
