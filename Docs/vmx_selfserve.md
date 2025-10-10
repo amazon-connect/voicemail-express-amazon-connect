@@ -20,7 +20,7 @@ To enable this option, you must first make sure that users have a security profi
         -  Current Agent is the only Preferred Agent on the Contact.
         -  Current Agent is one of the Preferred Agents on the Contact.
 1.  **Save** the security profile.
-![Security profile permnission](/Docs/Img/self_serve_security_profile.png)
+    ![Security profile permnission](/Docs/Img/self_serve_security_profile.png)
 
 ### Update the Routing Profile
 Next, you need to give the agent the ability to manually select tasks for each queue that you want them to. 
@@ -29,7 +29,7 @@ Next, you need to give the agent the ability to manually select tasks for each q
 1.  In the **Manual Assignment** section, select the queues you want agents to be able to self-service, then set the **Channels** to **Task** for each.
 1.  If you do not want tasks to automatically route, make sure to remove tasks from the queues in the **Queues** section.
 1.  Save the routing profile.
-![Routing profile configuration](/Docs/Img/self_serve_routing_profile.png)
+    ![Routing profile configuration](/Docs/Img/self_serve_routing_profile.png)
 
 ### OPTIONAL: Create a new status for manual voicemail work
 If you want agents to be able to remove themselves from the normal contact queue, but still address work in the worklist, you can create a new status that makes them unavailable for routing, but allows them to self-assign work. 
@@ -37,7 +37,7 @@ If you want agents to be able to remove themselves from the normal contact queue
 1.  Choose **Add new agent status**.
 1.  Create a new status. Give it a name like `Working Voicemail` or something to clearly indicate that the agent is self-assigning work.
 1.  Provide a description, if desired, then choose **Save**.
-![New agent status](/Docs/Img/self_serve_agent_status.png)
+    ![New agent status](/Docs/Img/self_serve_agent_status.png)
 
 ## Validate your setup
 Once you have made this changes, you can validate by performing the following:
