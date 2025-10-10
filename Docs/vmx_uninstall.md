@@ -5,14 +5,10 @@ WUninstalling Voicemail Express is a fairly straightforward process.
 First, you will need to prepare the instance for Voicemail removal. To do this, perform the following tasks:
 1.  Log into your Amazon Connect instance as an administrator.
 1.  Select **Channels**, then choose **Phone numbers**.
-1.  Make sure that none of VMX default flows are set as the **Contact flow/IVR** for any phone numbers in your instance. The default flows are:
-    1.  VMX3-AWSTestFlow-%instance-name%
-    1.  VMX3-BasicTaskFlow-%instance-name%
-    1.  VMX-CoreFlowModule-%instance-name%
+1.  Make sure that none of VMX default flows are set as the **Contact flow/IVR** for any phone numbers in your instance. The default flows all begin with `VMX3`
 
-| :warning: IMPORTANT          |
-|:---------------------------|
-| You may have referenced some of these flows from within your other flows. While not necessary to uninstall Voicemail Express, you should also validate that these default flows are not referenced elsewhere as that could result in flow failures.|
+> [!Caution]
+> You may have referenced some of these flows from within your other flows. While not necessary to uninstall Voicemail Express, you should also validate that these default flows are not referenced elsewhere as that could result in flow failures.
 
 ## Move your voicemail recordings/transcripts
 Since the retention policy of the CloudFormation template used to deploy voicemail does not allow for the deletion of the S3 buckets that hold the voicemail recordings and temporary transcripts if they have objects in them, you should first either copy the contents elsewhere (if you wish to retain copies for archival) or delete the contents of the S3 buckets. 

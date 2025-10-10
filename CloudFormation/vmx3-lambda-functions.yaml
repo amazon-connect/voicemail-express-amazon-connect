@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: Deploys the Voicemail Express Lambda functions. Updated for 2024.09.01.
+Description: Deploys the Voicemail Express Lambda functions. Updated for 2025.09.12.
 
 Parameters:
   EXPTemplateVersion:
@@ -15,11 +15,11 @@ Parameters:
     Type: String
   EnableVMToEmail:
     Type: String
+  EnableGenAISummary:
+    Type: String
   EXPDevBucketPrefix:
     Type: String
   LambdaLoggingLevel:
-    Type: String
-  RecordingsExpireInXDays:
     Type: String
   VMEmailDefaultAgentTemplate:
     Type: String
@@ -43,9 +43,9 @@ Parameters:
     Type: String
   VMAgentAddressKey:
     Type: String
-  VMXKVStoS3RoleArn:
+  VMXRecordingProcessorRoleArn:
     Type: String
-  VMXKVStoS3Role:
+  VMXRecordingProcessorRole:
     Type: String
   VMXPackagerRoleArn:
     Type: String
@@ -63,10 +63,15 @@ Parameters:
     Type: String
   VMXTranscriberErrorRole:
     Type: String
+  VMXTimestamperRoleArn:
+    Type: String
+  VMXTimestamperRole:
+    Type: String
   TaskRecordingLinksExpireInXDays:
     Type: String
   EmailRecordingLinksExpireInXDays:
     Type: String
+
 
 Mappings:
   TZInfo:
@@ -90,6 +95,8 @@ Mappings:
       TZvalue: 'Europe/Berlin'
     eu-west-2:
       TZvalue: 'Europe/London'
+    us-gov-west-1:
+      TZvalue: 'America/Los_Angeles'
   VMModes:
     AmazonConnectTask:
       mode: task
@@ -97,6 +104,40 @@ Mappings:
       mode: guided_task
     AmazonSimpleEmailService:
       mode: email
+  BedrockModel:
+    us-east-1:
+      infRegion: 'us-east-1'
+      infModel: 'us.amazon.nova-lite-v1:0'
+    us-west-2:
+      infRegion: 'us-west-2'
+      infModel: 'us.amazon.nova-lite-v1:0'
+    af-south-1:
+      infRegion: 'eu-west-2'
+      infModel: 'amazon.nova-lite-v1:0'
+    ap-southeast-1:
+      infRegion: 'ap-southeast-1'
+      infModel: 'apac.amazon.nova-lite-v1:0'
+    ap-southeast-2:
+      infRegion: 'ap-southeast-2'
+      infModel: 'apac.amazon.nova-lite-v1:0'
+    ap-northeast-1:
+      infRegion: 'ap-northeast-1'
+      infModel: 'apac.amazon.nova-lite-v1:0'
+    ap-northeast-2:
+      infRegion: 'ap-northeast-2'
+      infModel: 'apac.amazon.nova-lite-v1:0'
+    ca-central-1:
+      infRegion: 'ca-central-1'
+      infModel: 'ca.amazon.nova-lite-v1:0'
+    eu-central-1:
+      infRegion: 'eu-central-1'
+      infModel: 'eu.amazon.nova-lite-v1:0'
+    eu-west-2:
+      infRegion: 'eu-west-2'
+      infModel: 'amazon.nova-lite-v1:0'
+    us-gov-west-1:
+      infRegion: 'us-gov-west-1'
+      infModel: 'us-gov.anthropic.claude-3-5-sonnet-20240620-v1:0'
 
 Conditions:
   ConnectTasksEnabled: !Equals 
@@ -121,7 +162,7 @@ Resources:
     Type: AWS::Lambda::LayerVersion
     Properties:
       CompatibleRuntimes:
-        - python3.12
+        - python3.13
       Content:
         S3Bucket:
           !Join
@@ -138,7 +179,7 @@ Resources:
       Description: Provides dependencies code and functions for AWS Lambda functions that power Voicemail Express.
       LayerName: !Join
         - ''
-        - - 'common_python_layer_'
+        - - 'VMX3-Python-Layer-'
           - !Ref ConnectInstanceAlias
       LicenseInfo: https://aws.amazon.com/apache-2-0
 
@@ -184,8 +225,11 @@ Resources:
         LogFormat: JSON
         SystemLogLevel: INFO
       Role: !Ref VMXPresignerRoleArn
-      Runtime: python3.12
-      Timeout: 30
+      Runtime: python3.13
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      Timeout: 60
 
   VMXPackager:
     Type: AWS::Lambda::Function
@@ -218,6 +262,12 @@ Resources:
             !If [ConnectGuidedTasksEnabled, !Ref VMXDefaultGuidedTaskFlow, 'AWS::NoValue']
           package_version:
             Ref: EXPTemplateVersion
+          aws_region:
+            Ref: AWSRegion
+          inference_model:
+            Fn::FindInMap: [BedrockModel, !Ref "AWS::Region", infModel]            
+          inference_region:
+            Fn::FindInMap: [BedrockModel, !Ref "AWS::Region", infRegion]
           TZ:
             !FindInMap [TZInfo, !Ref "AWS::Region", TZvalue]
           default_email_from:
@@ -230,6 +280,8 @@ Resources:
             !If [AWSEmailEnabled, !Ref VMEmailDefaultAgentTemplate, 'AWS::NoValue']
           default_queue_email_template:
             !If [AWSEmailEnabled, !Ref VMEmailDefaultQueueTemplate, 'AWS::NoValue']
+          vmx3_do_genai_summary:
+            Ref: EnableGenAISummary
           agent_email_key:
             !If [AWSEmailEnabled, !Ref VMAgentAddressKey, 'Email']
       FunctionName:
@@ -245,7 +297,10 @@ Resources:
         SystemLogLevel: INFO
       Role: !Ref VMXPackagerRoleArn
       Layers: [!Ref VMXPythonLayer]
-      Runtime: python3.12
+      Runtime: python3.13
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       Timeout: 900
 
   VMXTranscriber:
@@ -280,7 +335,10 @@ Resources:
               - !Ref ConnectInstanceAlias
       Handler: vmx3_transcriber.lambda_handler
       Role: !Ref VMXTranscriberRoleArn
-      Runtime: python3.12
+      Runtime: python3.13
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       LoggingConfig:
         ApplicationLogLevel:
           Ref: LambdaLoggingLevel
@@ -288,7 +346,7 @@ Resources:
         SystemLogLevel: INFO
       Timeout: 900
 
-  VMXKVStoS3:
+  VMXRecordingProcessor:
     Type: AWS::Lambda::Function
     Properties:
       Code:
@@ -303,25 +361,29 @@ Resources:
           - ''
           - - 'vmx3/'
             - !Ref EXPTemplateVersion
-            - /zip/vmx3_kvs_to_s3.py.zip
-      Description: Extracts the voicemail from the KVS stream and writes it to S3 with tag data
+            - /zip/vmx3_recording_processor.py.zip
+      Description: Retrieves the voicemail from the IVR recording and trims as necessary.
       Environment:
         Variables:
           aws_region:
             Ref: AWSRegion
-          s3_recordings_bucket:
+          vmx3_recordings_bucket:
             Ref: VMXS3RecordingsBucket
           package_version:
             Ref: EXPTemplateVersion
       FunctionName:
         !Join
             - ''
-            - - 'VMX3-KVStoS3-'
+            - - 'VMX3-RecordingProcessor-'
               - !Ref ConnectInstanceAlias
-      Handler: vmx3_kvs_to_s3.lambda_handler
-      Role: !Ref VMXKVStoS3RoleArn
+      Handler: vmx3_recording_processor.lambda_handler
+      MemorySize: 512
+      Role: !Ref VMXRecordingProcessorRoleArn
       Layers: [!Ref VMXPythonLayer]
-      Runtime: python3.12
+      Runtime: python3.13
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       LoggingConfig:
         ApplicationLogLevel:
           Ref: LambdaLoggingLevel
@@ -361,7 +423,10 @@ Resources:
               - !Ref ConnectInstanceAlias
       Handler: vmx3_transcription_error_handler.lambda_handler
       Role: !Ref VMXTranscriberErrorRoleArn
-      Runtime: python3.12
+      Runtime: python3.13
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       LoggingConfig:
         ApplicationLogLevel:
           Ref: LambdaLoggingLevel
@@ -376,9 +441,9 @@ Outputs:
   VMXTranscriberArn:
     Description: ARN of the Transcriber function
     Value: !GetAtt VMXTranscriber.Arn
-  VMXKVStoS3:
-    Description: Name of the KVS to S3 function
-    Value: !Ref VMXKVStoS3
+  VMXRecordingProcessor:
+    Description: Name of the Recording Processor function
+    Value: !Ref VMXRecordingProcessor
   VMXTranscribeErrorArn:
     Description: ARN of the transcribe error handler function
     Value: !GetAtt VMXTranscribeErrorHandler.Arn

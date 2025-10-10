@@ -1,7 +1,7 @@
-current_version = '2024.09.01'
+current_version = '2025.09.12'
 '''
 **********************************************************************************************************************
- *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
+ *  Copyright 2025 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
  *                                                                                                                    *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated      *
  *  documentation files (the "Software"), to deal in the Software without restriction, including without limitation   *
@@ -16,13 +16,12 @@ current_version = '2024.09.01'
  **********************************************************************************************************************
 '''
 
-# Import the necessary modules for this function
-import json
+# Import required modules
 import boto3
+import json
 import logging
-from botocore.client import Config
-import base64
 import os
+from botocore.client import Config
 
 # Establish logging configuration
 logger = logging.getLogger()
@@ -30,6 +29,7 @@ logger = logging.getLogger()
 def lambda_handler(event, context):
     
     # Debug lines for troubleshooting
+    logger.debug('Function Name: ' + os.environ['AWS_LAMBDA_FUNCTION_NAME'])
     logger.debug('Code Version: ' + current_version)
     logger.debug('VMX3 Package Version: ' + os.environ['package_version'])
     logger.debug(event)
@@ -76,7 +76,7 @@ def lambda_handler(event, context):
     try:
         use_bucket = os.environ['s3_recordings_bucket']
         logger.debug(use_bucket)
-        vm_key = event['Details']['ContactData']['Attributes']['contact_id'] + '.wav'
+        vm_key = event['Details']['ContactData']['Attributes']['vmx3_recording_key']
         logger.debug(vm_key)
         
         presigned_url = s3_client.generate_presigned_url('get_object',
@@ -87,7 +87,7 @@ def lambda_handler(event, context):
 
         logger.debug('********** Presigned URL Generated successfully **********')
         logger.debug('Presigned URL: ' + presigned_url)
-        response.update({'presigned_url': presigned_url})
+        response.update({'vmx3_presigned_url': presigned_url})
 
     except Exception as e:
         logger.error('********** Presigned URL Failed to generate **********')

@@ -21,7 +21,7 @@ reported the issue. Please try to include as much information as you can. Detail
 
 
 ## Contributing via Pull Requests
-Contributions via pull requests are much appreciated. Before sending us a pull request, please ensure that:
+Contributions via pull requests are much appreciated for small changes, typos, etc. Larger feature changes or adds should come in via the issue tracker. This solution is intentially being tightly controlled to align with Amazon Connect roadmap and to minimize service footprint. Before sending us a pull request, please ensure that:
 
 1. You are working against the latest source on the *main* branch.
 2. You check existing open, and recently merged, pull requests to make sure someone else hasn't addressed the problem already.

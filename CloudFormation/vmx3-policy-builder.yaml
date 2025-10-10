@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: Updates the VMX roles with appropriate policies. Updated for 2024.09.01.
+Description: Updates the VMX roles with appropriate policies. Updated for 2025.09.12.
 
 Parameters:
   ConnectInstanceAlias:
@@ -9,7 +9,7 @@ Parameters:
     Type: String
   VMXGuidedFlowPresignerRole:
     Type: String
-  VMXKVStoS3Role:
+  VMXRecordingProcessorRole:
     Type: String
   VMXPackagerRole:
     Type: String
@@ -25,7 +25,7 @@ Parameters:
     Type: String
   VMXS3TranscriptsBucketArn:
     Type: String
-  VMXKVSStreamPrefix:
+  ConnectRecordingsBucketArn:
     Type: String
   ConnectCTRStreamARN:
     Type: String
@@ -66,7 +66,7 @@ Resources:
           - Effect: Allow
             Action:
               - 's3:GetObject'
-              - 's3:GeneratePresignedUrl'
+              - 's3:ListBucket'
             Resource:
               !Join
                 - ''
@@ -80,27 +80,12 @@ Resources:
       Roles:
         - !Ref VMXGuidedFlowPresignerRole
 
-  VMXKVStoS3Policy:
+  VMXRecordingProcessor:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Effect: Allow
-            Action:
-              - 'kinesisvideo:ListFragments'
-              - 'kinesisvideo:GetMediaForFragmentList'
-              - 'kinesisvideo:GetDataEndpoint'
-            Resource:
-              !Join
-                - ''
-                - - 'arn:aws:kinesisvideo:'
-                  - !Ref AWSRegion
-                  - ':'
-                  - !Ref AWS::AccountId
-                  - ':stream/'
-                  - !Ref VMXKVSStreamPrefix
-                  - '*'
           - Effect: Allow
             Action:
               - 's3:PutObject'
@@ -120,14 +105,24 @@ Resources:
               - 'kinesis:GetShardIterator'
               - 'kinesis:ListShards'
               - 'kinesis:ListStreams'
-            Resource: !Ref ConnectCTRStreamARN       
+            Resource: !Ref ConnectCTRStreamARN
+          - Effect: Allow
+            Action:
+              - 's3:GetObject'
+              - 's3:GetObjectTagging'
+              - 's3:ListBucket'
+            Resource:
+              !Join
+                - ''
+                - - !Ref ConnectRecordingsBucketArn
+                  - '/*'
       ManagedPolicyName:
         !Join
           - ''
-          - - 'VMX_KVS_to_S3_Policy_'
+          - - 'VMX_Recording_Processor_Policy_'
             - !Ref ConnectInstanceAlias
       Roles:
-        - !Ref VMXKVStoS3Role
+        - !Ref VMXRecordingProcessorRole
 
   VMXPackagerPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -142,6 +137,9 @@ Resources:
               - 'connect:GetContactAttributes'
               - 'connect:UpdateContactAttributes'
               - 'connect:StartTaskContact'
+              - 'connect:ListUsers'
+              - 'connect:ListUserProficiencies'
+              - 'connect:SearchUsers'
             Resource: 
               - !Ref ConnectInstanceARN
               - !Join
@@ -198,6 +196,17 @@ Resources:
                 - ''
                 - - !Ref VMXS3TranscriptsBucketArn
                   - '/*'
+          - Effect: Allow
+            Action:
+              - 'bedrock:InvokeModel'
+              - 'bedrock:InvokeModelWithResponseStream'
+            Resource:
+              - 'arn:aws:bedrock:*::foundation-model/*'
+              - !Join
+                - ''
+                - - 'arn:aws:bedrock:*:'
+                  - !Ref AWS::AccountId
+                  - ':inference-profile/*'
       ManagedPolicyName:
         !Join
           - ''
@@ -216,7 +225,7 @@ Resources:
           - Effect: Allow
             Action:
               - 's3:GetObject'
-              - 's3:GeneratePresignedUrl'
+              - 's3:ListBucket'
             Resource:
               !Join
                 - ''

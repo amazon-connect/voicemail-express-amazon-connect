@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: Deploys the Voicemail Express content triggers. Updated for 2024.09.01
+Description: Deploys the Voicemail Express content triggers. Updated for 2025.09.12
 
 Parameters:
   EXPTemplateVersion:
@@ -9,17 +9,17 @@ Parameters:
     Type: String
   VMXS3RecordingsBucket:
     Type: String
-  VMXS3TranscriptsBucket:
-    Type: String
   VMXS3RecordingsBucketArn:
     Type: String
-  VMXPackagerArn:
+  VMXS3TranscriptsBucket:
     Type: String
   VMXS3TranscriptsBucketArn:
     Type: String
+  VMXPackagerArn:
+    Type: String
   VMXTranscriberArn:
     Type: String
-  VMXKVStoS3:
+  VMXRecordingProcessor:
     Type: String
   ConnectInstanceAlias:
     Type: String
@@ -31,6 +31,8 @@ Parameters:
     Type: String
   EnableVMToConnectGuidedTask:
     Type: String
+  VMXTimeStamperArn:
+    Type: String
 
 Conditions:
   ConnectGuidedTasksEnabled: !Equals
@@ -39,13 +41,20 @@ Conditions:
 
 Resources:
 
-  IntegrationAssociation:
+  GuidedTaskPresignerFunctionAssociation:
     Type: AWS::Connect::IntegrationAssociation
     Condition: ConnectGuidedTasksEnabled
     Properties:
       InstanceId: !Ref ConnectInstanceARN
       IntegrationType: LAMBDA_FUNCTION
       IntegrationArn: !Ref VMXGuidedFlowPresignerArn
+
+  TimestampLambdaFunctionAssociation:
+    Type: AWS::Connect::IntegrationAssociation
+    Properties:
+      InstanceId: !Ref ConnectInstanceARN
+      IntegrationType: LAMBDA_FUNCTION
+      IntegrationArn: !Ref VMXTimeStamperArn
 
   RecordingsBucketPermission:
     Type: AWS::Lambda::Permission
@@ -72,12 +81,15 @@ Resources:
       BisectBatchOnFunctionError: true
       Enabled: true
       EventSourceArn: !Ref ConnectCTRStreamARN
-      FunctionName: !Ref VMXKVStoS3
+      FunctionName: !Ref VMXRecordingProcessor
       MaximumRetryAttempts: 3
       StartingPosition: LATEST
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       FilterCriteria:
         Filters:
-          - Pattern: "{    \"data\":{        \"Attributes\":{            \"vmx3_flag\":[\"1\"]        },        \"Recordings\":{            \"StorageType\":[\"KINESIS_VIDEO_STREAM\"]        },        \"Agent\":[null]    }}"
+          - Pattern: "{    \"data\":{        \"Attributes\":{            \"vmx3_flag\":[\"1\"]        },        \"Recordings\":{            \"ParticipantType\":[\"IVR\"]        },        \"Agent\":[null]    }}"
 
   TranscriberRule:
     Type: AWS::Events::Rule
@@ -94,6 +106,9 @@ Resources:
               - !Ref VMXS3RecordingsBucket
       Name: !Join [ "-", [ !Ref ConnectInstanceAlias,TranscriberRule ] ]
       State: ENABLED
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       Targets:
         - Id: !Join [ "-", [ !Ref ConnectInstanceAlias,TranscriberFunction ] ]
           Arn: !Ref VMXTranscriberArn
@@ -122,6 +137,9 @@ Resources:
               - !Ref VMXS3TranscriptsBucket
       Name: !Join [ "-", [ !Ref ConnectInstanceAlias,PackagerRule ] ]
       State: ENABLED
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       Targets: 
         - Id: !Join [ "-", [ !Ref ConnectInstanceAlias,PackagerFunction ] ]
           Arn: !Ref VMXPackagerArn
@@ -151,6 +169,9 @@ Resources:
         }
       Name: !Join [ "-", [ !Ref ConnectInstanceAlias,TranscribeErrorRule ] ]
       State: ENABLED
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       Targets: 
         - Id: !Join [ "-", [ !Ref ConnectInstanceAlias,TranscribeErrorFunction ] ]
           Arn: !Ref VMXTranscribeErrorArn

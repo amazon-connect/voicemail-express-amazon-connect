@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 
-Description: Deploys the Voicemail Express solution for Amazon Connect. Updated for 2024.09.01.
+Description: Deploys the Voicemail Express solution for Amazon Connect. Updated for 2025.09.12.
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -11,7 +11,7 @@ Metadata:
           - AWSRegion
           - ConnectInstanceAlias
           - ConnectInstanceARN
-          - VMXKVSStreamPrefix
+          - ConnectRecordingsBucketArn
           - ConnectCTRStreamARN
           - LambdaLoggingLevel
       - Label:
@@ -22,9 +22,11 @@ Metadata:
           - EnableVMToEmail
           - VMDefaultMode
       - Label:
-          default: 3. Voicemail Express Recording Simple Storage Service (S3) Retention
-            Settings
+          default: 3. Voicemail Express AI Option and Recording Retention
+            Settings 
         Parameters:
+          - EnableGenAISummary
+          - EnableBucketVersioning
           - RecordingsExpireInXDays
           - ExpiredRecordingBehavior
       - Label:
@@ -66,6 +68,10 @@ Metadata:
         default: What is your Amazon Connect instance ARN (Amazon Resource Name)?
       EmailRecordingLinksExpireInXDays:
         default: How long should the presigned recording URL be valid for? (# of days)
+      EnableGenAISummary:
+        default: Do you want to generate an summary of the voicemail using generative AI?
+      EnableBucketVersioning:
+        default: Do you want to enable S3 Versioning for the recordings and transcription buckets?
       EnableVMToConnectTask:
         default: Enable Voicemail delivery as an Amazon Connect Task?
       EnableVMToConnectGuidedTask:
@@ -84,8 +90,8 @@ Metadata:
       GuidedTaskRecordingLinksExpireInXMinutes:
         default: How long should the presigned recording URL be valid for? (# of
           minutes)
-      VMXKVSStreamPrefix:
-        default: What is the prefix for the Kinesis Video Streams (KVS) associated with this instance?
+      ConnectRecordingsBucketArn:
+        default: What is the ARN for the S3 bucket used to store Amazon Connect recordings?
       LambdaLoggingLevel:
         default: For the included AWS Lambda functions, what should the default logging
           level be set to?
@@ -123,6 +129,7 @@ Parameters:
       - ca-central-1
       - eu-central-1
       - eu-west-2
+      - us-gov-west-1
     Description: All resources for this template must reside in the same region.
       Validate which region your Amazon Connect instance is deployed in and
       select the corresponding region from the drop-down list. You should run
@@ -147,10 +154,10 @@ Parameters:
     Type: String
     Default: ''
     Description: Not required and only used for development purposes.
-  VMXKVSStreamPrefix:
+  ConnectRecordingsBucketArn:
     Type: String
-    Default: 'Looks like - PREFIX-connect-ALIAS-contact-'
-    Description: The full prefix for the KVS streams. You can find this in the Connect Console at Data Storage > Live media Streaming > Kinesis video stream prefix.
+    Default: 'Looks like - arn:aws:s3:::YOURBUCKETNAME'
+    Description: The full ARN for the S3 bucket. You can find the bucket name in the Connect Console at Data Storage > Call recordings.
   EmailRecordingLinksExpireInXDays:
     Type: String
     Default: 1
@@ -175,6 +182,13 @@ Parameters:
       - 6
       - 7
     Description: Select the number of days.
+  EnableBucketVersioning:
+    Type: String
+    Default: 'no'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Description: Enable versioning on both buckets. Versioning-enabled buckets can help you recover objects from accidental deletion or overwrite. 
   EnableVMToConnectTask:
     Type: String
     Default: 'no'
@@ -184,6 +198,13 @@ Parameters:
     Description: Allow voicemails to be delivered to agents as Amazon Connect Tasks.
       Works with Agent Workspace, CCP, or streams. Incoming task will contain
       the transcript and a presigned URL to the recording.
+  EnableGenAISummary:
+    Type: String
+    Default: 'no'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Description: By default, use generative AI to create a summary of the recording and include that summary in the delivered voicemail. (Can be overridden on a case-by-case basis)
   EnableVMToConnectGuidedTask:
     Type: String
     Default: 'yes'
@@ -214,7 +235,7 @@ Parameters:
       it, or move it to Glacier?
   EXPTemplateVersion:
     Type: String
-    Default: 2024.09.01
+    Default: 2025.09.12
     Description: Template version. ONLY change if you have built a custom version.
   GuidedTaskRecordingLinksExpireInXMinutes:
     Type: String
@@ -301,6 +322,43 @@ Conditions:
     - !Equals
       - !Ref EnableVMToEmail
       - 'yes'
+  GenAIEnabled: !Equals
+    - !Ref EnableGenAISummary
+    - 'yes'
+  GenAIRegionUS: !Or
+    - !Equals
+      - !Ref AWSRegion
+      - 'us-east-1'
+    - !Equals
+      - !Ref AWSRegion
+      - 'us-west-2'
+    - !Equals
+      - !Ref AWSRegion
+      - 'us-gov-west-1'
+  GenAIRegionEU: !Equals
+    - !Ref AWSRegion
+    - 'eu-central-1'
+  GenAIRegionUK: !Equals
+    - !Ref AWSRegion
+    - 'eu-west-2'
+  GenAIRegionAPAC: !Or
+    - !Equals
+      - !Ref AWSRegion
+      - 'ap-southeast-1'
+    - !Equals
+      - !Ref AWSRegion
+      - 'ap-northeast-1'
+    - !Equals
+      - !Ref AWSRegion
+      - 'ap-northeast-2'
+  GenAIRegionNone: !Or
+    - !Equals
+      - !Ref AWSRegion
+      - 'ca-central-1'
+    - !Equals
+      - !Ref AWSRegion
+      - 'af-south-1'
+  
 
 Mappings:
   VMModes:
@@ -323,6 +381,7 @@ Resources:
         EnableVMToConnectTask: !Ref EnableVMToConnectTask
         EnableVMToConnectGuidedTask: !Ref EnableVMToConnectGuidedTask
         EnableVMToEmail: !Ref EnableVMToEmail
+        EnableBucketVersioning: !Ref EnableBucketVersioning
       TemplateURL: !Join
         - ''
         - - https://
@@ -365,6 +424,8 @@ Resources:
           - !GetAtt VMXCoreStack.Outputs.VMXGuidedFlowPresignerRole
           - AWS::NoValue
         LambdaLoggingLevel: !Ref LambdaLoggingLevel
+        VMXTimestamperRoleArn: !GetAtt VMXCoreStack.Outputs.VMXTimestamperRoleArn
+        VMXTimestamperRole: !GetAtt VMXCoreStack.Outputs.VMXTimestamperRole
       TemplateURL: !Join
         - ''
         - - https://
@@ -417,9 +478,12 @@ Resources:
         EnableVMToConnectTask: !Ref EnableVMToConnectTask
         EnableVMToConnectGuidedTask: !Ref EnableVMToConnectGuidedTask
         EnableVMToEmail: !Ref EnableVMToEmail
+        EnableGenAISummary: !If
+          - GenAIEnabled
+          - 'true'
+          - 'false'
         EXPDevBucketPrefix: !Ref EXPDevBucketPrefix
         LambdaLoggingLevel: !Ref LambdaLoggingLevel
-        RecordingsExpireInXDays: !Ref RecordingsExpireInXDays
         VMEmailDefaultAgentTemplate: !If
           - AWSEmailEnabled
           - !GetAtt VMXSESSetupStack.Outputs.VMEmailDefaultAgentTemplate
@@ -446,8 +510,8 @@ Resources:
         VMXS3RecordingsBucket: !GetAtt VMXCoreStack.Outputs.VMXS3RecordingsBucket
         VMXS3TranscriptsBucket: !GetAtt VMXCoreStack.Outputs.VMXS3TranscriptsBucket
         VMAgentAddressKey: !Ref VMAgentAddressKey
-        VMXKVStoS3RoleArn: !GetAtt VMXCoreStack.Outputs.VMXKVStoS3RoleArn
-        VMXKVStoS3Role: !GetAtt VMXCoreStack.Outputs.VMXKVStoS3Role
+        VMXRecordingProcessorRoleArn: !GetAtt VMXCoreStack.Outputs.VMXRecordingProcessorRoleArn
+        VMXRecordingProcessorRole: !GetAtt VMXCoreStack.Outputs.VMXRecordingProcessorRole
         VMXPackagerRoleArn: !GetAtt VMXCoreStack.Outputs.VMXPackagerRoleArn
         VMXPackagerRole: !GetAtt VMXCoreStack.Outputs.VMXPackagerRole
         VMXPresignerRole: !If
@@ -462,6 +526,8 @@ Resources:
         VMXTranscriberRoleArn: !GetAtt VMXCoreStack.Outputs.VMXTranscriberRoleArn
         VMXTranscriberErrorRole: !GetAtt VMXCoreStack.Outputs.VMXTranscriberErrorRole
         VMXTranscriberErrorRoleArn: !GetAtt VMXCoreStack.Outputs.VMXTranscriberErrorRoleArn
+        VMXTimestamperRole: !GetAtt VMXCoreStack.Outputs.VMXTimestamperRole
+        VMXTimestamperRoleArn: !GetAtt VMXCoreStack.Outputs.VMXTimestamperRoleArn
         TaskRecordingLinksExpireInXDays: !Ref TaskRecordingLinksExpireInXDays
         EmailRecordingLinksExpireInXDays: !Ref EmailRecordingLinksExpireInXDays
       TemplateURL: !Join
@@ -489,7 +555,7 @@ Resources:
           - ConnectGuidedTasksEnabled
           - !GetAtt VMXCoreStack.Outputs.VMXGuidedFlowPresignerRole
           - AWS::NoValue
-        VMXKVStoS3Role: !GetAtt VMXCoreStack.Outputs.VMXKVStoS3Role
+        VMXRecordingProcessorRole: !GetAtt VMXCoreStack.Outputs.VMXRecordingProcessorRole
         VMXPackagerRole: !GetAtt VMXCoreStack.Outputs.VMXPackagerRole
         VMXPresignerRole: !If
           - NonGuidedOptions
@@ -503,7 +569,7 @@ Resources:
         VMXTranscriberErrorRole: !GetAtt VMXCoreStack.Outputs.VMXTranscriberErrorRole
         VMXS3RecordingsBucketArn: !GetAtt VMXCoreStack.Outputs.VMXS3RecordingsBuckettArn
         VMXS3TranscriptsBucketArn: !GetAtt VMXCoreStack.Outputs.VMXS3TranscriptsBucketArn
-        VMXKVSStreamPrefix: !Ref VMXKVSStreamPrefix
+        ConnectRecordingsBucketArn: !Ref ConnectRecordingsBucketArn
         ConnectCTRStreamARN: !Ref ConnectCTRStreamARN
         AWSRegion: !Ref AWSRegion
         VMXPresignerArn: !If
@@ -541,7 +607,7 @@ Resources:
         VMXPackagerArn: !GetAtt VMXLambdaStack.Outputs.VMXPackagerArn
         VMXS3TranscriptsBucketArn: !GetAtt VMXCoreStack.Outputs.VMXS3TranscriptsBucketArn
         VMXTranscriberArn: !GetAtt VMXLambdaStack.Outputs.VMXTranscriberArn
-        VMXKVStoS3: !GetAtt VMXLambdaStack.Outputs.VMXKVStoS3
+        VMXRecordingProcessor: !GetAtt VMXLambdaStack.Outputs.VMXRecordingProcessor
         ConnectInstanceAlias: !Ref ConnectInstanceAlias
         VMXTranscribeErrorArn: !GetAtt VMXLambdaStack.Outputs.VMXTranscribeErrorArn
         VMXGuidedFlowPresignerArn: !If
@@ -549,6 +615,7 @@ Resources:
           - !GetAtt VMXContactFlowStack.Outputs.VMXGuidedFlowPresignerArn
           - AWS::NoValue
         EnableVMToConnectGuidedTask: !Ref EnableVMToConnectGuidedTask
+        VMXTimeStamperArn: !GetAtt VMXContactFlowStack.Outputs.VMXTimeStamperArn
 
       TemplateURL: !Join
         - ''

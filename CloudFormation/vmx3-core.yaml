@@ -1,11 +1,13 @@
 AWSTemplateFormatVersion: '2010-09-09'
 
-Description: Deploys the Voicemail Express core components. Updated for 2024.09.01.
+Description: Deploys the Voicemail Express core components. Updated for 2025.09.12.
 
 Parameters:
   ConnectInstanceAlias:
     Type: String
   ExpiredRecordingBehavior:
+    Type: String
+  EnableBucketVersioning:
     Type: String
   EnableVMToConnectTask:
     Type: String
@@ -46,16 +48,45 @@ Conditions:
     - !Equals
       - !Ref EnableVMToEmail
       - 'yes'
+  EnableVersioning: !Equals
+    - !Ref EnableBucketVersioning
+    - 'yes'
 
 Resources:
-  VMXKVStoS3Role:
+  VMXRecordingProcessorRole:
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Join
         - ''
-        - - VMX3_KVS_to_S3_Role_
+        - - VMX3_Recording_Processor_Role_
           - !Ref ConnectInstanceAlias
-      Description: Provides appropriate access for the KVS to S3 function.
+      Description: Provides appropriate access for the Recording Processor function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  VMXTimestamperRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join
+        - ''
+        - - VMX3_Time_Stamper_Role_
+          - !Ref ConnectInstanceAlias
+      Description: Provides appropriate access for the Timestamper role to function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -77,6 +108,9 @@ Resources:
         - - VMX3_Guided_Flow_Role_
           - !Ref ConnectInstanceAlias
       Description: Provides appropriate access for the Guided Flow Presigner function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -97,6 +131,9 @@ Resources:
         - - VMX3_Packager_Role_
           - !Ref ConnectInstanceAlias
       Description: Provides appropriate access for the Packager function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -118,6 +155,9 @@ Resources:
         - - VMX3_Presigner_Role_
           - !Ref ConnectInstanceAlias
       Description: Provides appropriate access for the Presigner function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -139,6 +179,9 @@ Resources:
         - - VMX3_SES_Template_Role_
           - !Ref ConnectInstanceAlias
       Description: Provides appropriate access for the SES Template tool function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -159,6 +202,9 @@ Resources:
         - - VMX3_Transcriber_Role_
           - !Ref ConnectInstanceAlias
       Description: Provides appropriate access for the Transcriber function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -179,6 +225,9 @@ Resources:
         - - VMX3_Transcriber_Error_Role_
           - !Ref ConnectInstanceAlias
       Description: Provides appropriate access for the Transcriber function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -202,6 +251,15 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      VersioningConfiguration:
+        !If
+          - EnableVersioning
+          - 
+            Status: Enabled
+          - !Ref 'AWS::NoValue'
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerPreferred
@@ -238,6 +296,15 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      VersioningConfiguration:
+        !If
+          - EnableVersioning
+          - 
+            Status: Enabled
+          - !Ref 'AWS::NoValue'
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerPreferred
@@ -277,6 +344,9 @@ Resources:
       - VMXPresignerUserPolicy
     Condition: NonGuidedOptions
     Properties:
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       UserName: !Join
         - ''
         - - VMX3_Presigner_User_
@@ -306,6 +376,9 @@ Resources:
         - - VMX3_Access_Secrets_
           - !Ref ConnectInstanceAlias
       Description: Stores user credentials for the presigner function
+      Tags: 
+        - Key: Solution
+          Value: VMX3
       SecretString: !Sub
         - '{"vmx_iam_key_id":"${KeyID}","vmx_iam_key_secret":"${KeySecret}"}'
         - KeyID: !Ref VMXUserKey
@@ -336,12 +409,12 @@ Outputs:
     Description: Guided flow presigner role ARN
     Condition: ConnectGuidedTasksEnabled
     Value: !GetAtt VMXGuidedFlowPresignerRole.Arn
-  VMXKVStoS3Role:
-    Description: KVS to S3 role name
-    Value: !Ref VMXKVStoS3Role
-  VMXKVStoS3RoleArn:
-    Description: KVS to S3 role ARN
-    Value: !GetAtt VMXKVStoS3Role.Arn
+  VMXRecordingProcessorRole:
+    Description: Recording Processor role name
+    Value: !Ref VMXRecordingProcessorRole
+  VMXRecordingProcessorRoleArn:
+    Description: Recording Processor role ARN
+    Value: !GetAtt VMXRecordingProcessorRole.Arn
   VMXPackagerRole:
     Description: Packager role name
     Value: !Ref VMXPackagerRole
@@ -376,3 +449,9 @@ Outputs:
   VMXTranscriberErrorRoleArn:
     Description: Transcriber error handler role ARN
     Value: !GetAtt VMXTranscriberErrorRole.Arn
+  VMXTimestamperRoleArn:
+    Description: Timestamper role ARN
+    Value: !GetAtt VMXTimestamperRole.Arn
+  VMXTimestamperRole:
+    Description: Timestamper role name
+    Value: !Ref VMXTimestamperRole

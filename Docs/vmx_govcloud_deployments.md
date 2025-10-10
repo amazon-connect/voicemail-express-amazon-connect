@@ -1,7 +1,7 @@
-# Installing Voicemail Express
-This document will walk you through the steps required to deploy the Voicemail Express in your AWS account. 
+# GovCloud Deployments
+GovCloud deployments follow the same pattern as standard deployments. The primary difference is that the deployment package must be loaded to an S3 bucket within the the account to conform with the more stringent security requirements of GovCloud deployments. Outside of that requirement, the deployment process is the same. 
 
-In order to deploy this template, you must first complete the [installation prerequisites](vmx_prerequistes.md). Once those are complete, you can continue with the process below.
+-  Complete the [installation prerequisites](vmx_prerequistes.md). Once those are complete, you can continue with the process below.
 
 ## Gather Required Information (All deployments)
 Voicemail Express is deployed via AWS CloudFormation. In order to launch the template, you will need the following information:
@@ -22,30 +22,37 @@ Voicemail Express is deployed via AWS CloudFormation. In order to launch the tem
 
 Once you have the required information, you are ready to continue with the deployment.
 
-## Delploy the Cloudformation Template
-The next step is to deploy the CloudFormation template. This template builds all of the AWS resources required to make Voicemail Express work.
-> [!IMPORTANT]
-> For GovCloud deployments, please follow the [GovCloud Deployment Instructions](/Docs/vmx_govcloud_deployments.md).
-1.  Open a new browser tab and then log into the [AWS console](https://console.aws.amazon.com/console/home). Be sure to set your region to match the region you have deployed Amazon Connect to, then return here.
-1.  Select the link below that matches your region to launch the template:
-    - us-east-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-us-east-1.s3.us-east-1.amazonaws.com/vmx3/2025.09.12/cloudformation/vmx3.yaml)
-    - us-west-2 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-us-west-2.s3.us-west-2.amazonaws.com/vmx3/2025.09.12/cloudformation/vmx3.yaml)
-    - af-south-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=af-south-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-af-south-1.s3.af-south-1.amazonaws.com/vmx3/2025.09.12/cloudformation/vmx3.yaml)
-    - ap-southeast-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=ap-southeast-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-ap-southeast-1.s3.ap-southeast-1.amazonaws.com/vmx3/2025.09.12/cloudformation/vmx3.yaml)
-    - ap-southeast-2 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=ap-southeast-2#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-ap-southeast-2.s3.ap-southeast-2.amazonaws.com/vmx3/2025.09.12/cloudformation/vmx3.yaml)
-    - ap-northeast-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=ap-northeast-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-ap-northeast-1.s3.ap-northeast-1.amazonaws.com/vmx3/2025.09.12/cloudformation/vmx3.yaml)
-    - ap-northeast-2 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=ap-northeast-2#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-ap-northeast-2.s3.ap-northeast-2.amazonaws.com/vmx3/2025.09.12/cloudformation/vmx3.yaml)
-    - ca-central-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=ca-central-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-ca-central-1.s3.ca-central-1.amazonaws.com/vmx3/2025.09.12/cloudformation/vmx3.yaml)
-    - eu-central-1 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=eu-central-1#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-eu-central-1.s3.eu-central-1.amazonaws.com/vmx3/2025.09.12/cloudformation/vmx3.yaml)
-    - eu-west-2 [<img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png">](https://console.aws.amazon.com/cloudformation/home?region=eu-west-2#/stacks/new?stackName=VMX3&templateURL=https://vmx-source-eu-west-2.s3.eu-west-2.amazonaws.com/vmx3/2025.09.12/cloudformation/vmx3.yaml)
-1.  Verify that the **Amazon S3 URL** is for the same region you are deploying to, then select **Next**
+## Create an S3 Bucket to host the templates and code
+During the deployment, several AWS Lambda functions will be deployed. The code for those functions is in ZIP files stored in S3. The bucket must be in the same region as your Amazon Connect instances. For typical deployments, those ZIP files are stored in public-facing buckets. In GovCloud deployments, we prefer to home the Zip files and cloud formation templates within the same account. This also allows for better control of the resources, as well as provides you with the opportunity to run virus/security scans against those resources if desired.
+
+1.  Create a new S3 bucket that follows this naming convention:
+    -  unique prefix name + vmx-source-us-gov-west-1
+    -  FOR EXAMPLE: vmxdougjaso-vmx-source-us-gov-west-1
+    -  Make sure to remember your prefix
+1.  Once created, create a new folder named `vmx3` in the new bucket
+1.  Download the [full VMX deployment package zip file](https://vmx-source-us-gov-west-1.s3.us-west-2.amazonaws.com/vmx3_version_2025.09.12.zip).
+1.  Extract the top-level contents of the file and upload the version folder to the new folder you created in your S3 bucket. The contents of the folder should resemble the image below:
+![S3 Object Structure](Img/vmx3_zip_structure.png)
+1. **Copy the Object URL for the vmx3.yaml file** (Example below)
+![S3 Object URL](Img/vmx3_s3_object_url.png)
+
+> [!IMPORTANT]  
+> The preceeding step is critical. The solution is deploying from resources in your environment. Do not attempt to deploy to govcloud from the standard template. The deployment will fail.
+
+
+## Deploy the solution
+1.  Open the [AWS Console](https://console.aws.amazon.com).
+1.  Navigate to **CloudFormation**.
+1.  Select **Create stack** and choose **With new resources (standard)**.
+1.  In the **Specify template** section, select **Amazon S3 URL** and paste the Object URL for the vmx3.yaml file that you copied in the previous step.
 1.  Update the stack name to include your instance alias, for example such as `VMX3-MyInstanceName`
-1.  **Complete the parameters** using the information that you have gathered.
-1.  Once the parameters are complete, choose **Next**
-1. 	Scroll to the bottom, select the boxes to **acknowledge that IAM resources will be created**
-1. 	Scroll to the bottom and select **Next**
-1.  Select **Submit**
-1.  The deployment will take 3-5 minutes. During this time, multiple nested stacks will be deployed. Once the main stack shows **CREATE_COMPLETE**, you are ready to proceed.
+3.  In the **1. Environment Configuration** section, set the **What is the prefix for your deployment bucket?** field, enter the bucket prefix that you used earlier when creating your bucket. For example, if your bucket name was `mygovcloud-vmx-source-us-gov-west-1`, you would enter `mygovcloud-`
+3.  **Complete the remaining parameters** using the information that you have gathered.
+3.  Once the parameters are complete, choose **Next**
+3. 	Scroll to the bottom and select **Next**
+3. 	Scroll to the bottom, select the boxes to **acknowledge that IAM resources will be created**
+3.  Select **Submit**
+3.  The deployment will take 3-5 minutes. During this time, multiple nested stacks will be deployed. Once the main stack shows **CREATE_COMPLETE**, you are ready to proceed.
 
 ## Assign a test number
 1.  Login to the Amazon Connect administration interface

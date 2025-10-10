@@ -1,4 +1,27 @@
 # Voicemail Express 3 Changelog
+## 2025.09.12
+-  Changed VMX3 process to use Amazon Connect's IVR recording feature instead of KVS. Including ability to specifically extract VM from full IVR Recording use cases.
+-  Added Generative AI summary option
+-  Switched from agent personal queues to preferred agent routing for better control over tasks when agents are unavailable
+-  Added in queue voicemail option and examples
+-  Configuration now supports GovCloud
+-  Added support for bucket versioning
+-  Validated and documented operation with customer-managed KMS keys (based on work by [Kgopelo](https://github.com/kgopelom))
+-  Validated voicemails up to 25 minutes long
+-  performance tested up to 2000 voicemails per hour
+-  Added documentation for supporting long voicemails
+-  Added documentation for supporting self-service voicemails
+-  Truncated voicemail transcripts to meet task reference limits
+-  Additional voicemail filtering to support high volume environments
+-  Updated recording and transcript bucket folder structure to make files easier to find
+-  Updated all functions to Python 3.13
+-  Updated logging configuration on all functions
+-  Updated HTML code for email delivery
+-  Updated Agent View when using guided tasks option
+-  Added tagging to all resources
+-  Added tagging to contacts
+-  Fixed the MIME type to imporve broswser playback compatability
+
 ## 2024.09.01
 -  Added guided task option, visualizing a player, and obfuscating short lived URL
 -  IAM Roles and policies by function instead of one central role/policy

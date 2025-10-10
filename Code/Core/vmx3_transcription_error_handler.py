@@ -1,7 +1,7 @@
-current_version = '2024.09.01'
+current_version = '2025.09.12'
 '''
 **********************************************************************************************************************
- *  Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
+ *  Copyright 2025 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
  *                                                                                                                    *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated      *
  *  documentation files (the "Software"), to deal in the Software without restriction, including without limitation   *
@@ -16,11 +16,11 @@ current_version = '2024.09.01'
  **********************************************************************************************************************
 '''
 
-# Import the necessary modules for this function
-import json
-import os
+# Import required modules
 import boto3
+import json
 import logging
+import os
 
 # Establish logging configuration
 logger = logging.getLogger()
