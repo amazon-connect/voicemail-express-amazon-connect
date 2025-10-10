@@ -31,5 +31,5 @@ Make sure that you remove the test flow from any phone numbers in your Amazon Co
 If there are any files in the S3 buckets created by the stack, the delete will fail intentionally. You must decide what to do with your files. You can opt to delete them, move them, or re-run the delete, choosing the option to keep the bucket resources. If you delete them or move them, re-run the delete and it should succeed.
 
 ## Upgrade Issues
-### THe upgrade succeeded but the voicemails are not being delivered. VMXRecordingProcessor function fails at step 1.
+### The upgrade succeeded but the voicemails are not being delivered. VMXRecordingProcessor function fails at step 1.
 When upgrading from previous versions, make sure to complete the cloudformation template parameters. In older versions, access to the Amazon Connect recording store was not necessary. That was added in 2025.09.12. If you did not include the recording bucket ARN in the template, the solution will fail. Re-run the update, making sure to complete the parameters.

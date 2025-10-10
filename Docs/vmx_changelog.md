@@ -6,7 +6,7 @@
 -  Added in queue voicemail option and examples
 -  Configuration now supports GovCloud
 -  Added support for bucket versioning
--  Validated and documented operation with customer-managed KMS keys
+-  Validated and documented operation with customer-managed KMS keys (based on work by [Kgopelo](https://github.com/kgopelom))
 -  Validated voicemails up to 25 minutes long
 -  performance tested up to 2000 voicemails per hour
 -  Added documentation for supporting long voicemails

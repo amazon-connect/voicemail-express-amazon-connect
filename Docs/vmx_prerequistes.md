@@ -5,7 +5,7 @@ Before deploying the Voicemail Express, you will need to complete a few prerequi
 -  [Amazon Nova Lite & Claude Sonnect 3.5 (For GovCloud) enabled in Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access-modify.html) (Only required if you want to enable generative AI summaries of voicemail.)
 
 > [!Note]
-> Model access for all models will be allowed by default on AWS accounts beginning Oct 8, 2025
+> Model access for all models will be allowed by default on AWS accounts beginning in October 2025
 
 ## Delivery mode specific prerequisites
 ### Setup steps for Amazon Connect Task or Guided Task delivery
