@@ -19,7 +19,7 @@ When new versions of Voicemail Express are release, you can easily upgrade to th
 1.  Change that value to the latest version available. You can find the latest version at the end of the [README](https://github.com/amazon-connect/voicemail-express-amazon-connect) page.
 1.  There may have been additional fields and changes. Please validate/update all other fields as well.
 > [!IMPORTANT]  
-> When updating from aversion before 2025.09.12, you MUST provide the bucket that Amazon Connect uses to store recordings. 
+> When updating from a version before 2025.09.12, you MUST provide the bucket that Amazon Connect uses to store recordings. 
 14. Once the parameters are filled out, choose **Next**
 14. Scroll to the bottom and select **Next**
 14. Scroll to the bottom, select the boxes to **acknowledge that IAM resources will be created**

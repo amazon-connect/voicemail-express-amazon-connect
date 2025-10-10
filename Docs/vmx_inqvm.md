@@ -10,7 +10,7 @@ In this version of Voicemail Express, three contact flows have been provided to 
 
 ## VMX3_In_Queue_Option
 ![VMX3_In_Queue_Option Flow](/Docs/Img/vmx3_inqueue_option.png)
-This flow provides the option to leave a voicemail instead of remaining in queue. It tracks the customer reposne to the offer, and does not offer the option again if the customer declines so that they are not repeatedly asked the same question. If they do select to leave a voicemail, the VMX3_In_Queue_Agent_Whisper flow is set, and the rest of the experience mimics the normal voicemail experience. 
+This flow provides the option to leave a voicemail instead of remaining in queue. It tracks the customer reposne to the offer, and does not offer the option again if the customer declines so that they are not repeatedly asked the same question. If they do select to leave a voicemail, the VMX3_In_Queue_Agent_Whisper and VMX3_In_Queue_Customer_Whisper flows are set, and the rest of the experience mimics the normal voicemail experience. 
 
 ## VMX3_In_Queue_Agent_Whisper
 ![VMX3_In_Queue_Agent_Whisper Flow](/Docs/Img/vmx3_inqueue_whisper.png)
