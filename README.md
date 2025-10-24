@@ -3,7 +3,7 @@ Voicemail Express is designed to provide basic voicemail functionality to Amazon
 
 ![Voicemail Express Architecture](Docs/Img/vmx3_20250912.png)
 
-## What's new in VMX3 (2025.09.12)
+## What's new in VMX3 (2025.09)
 ### New Features
 **New Recording Process**
 
@@ -103,7 +103,7 @@ The following items are currently planned for future releases. Changes to roadma
 -  Include recordings as attachments to Tasks once available, removing the need for presigned URLs on task-based voicemails
 
 ## Current Published Version
-### 2025.09.12
+### 2025.09.13
 This is the published version of the code and templates that has been deployed to our S3 buckets and will be used during a normal deployment.
 
 ## Acknowledgements

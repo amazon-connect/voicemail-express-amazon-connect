@@ -1,4 +1,4 @@
-current_version = '2025.09.12'
+current_version = '2025.09.13'
 '''
 **********************************************************************************************************************
  *  Copyright 2025 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -116,33 +116,33 @@ def build_data_payload(function_payload):
     else:
         sub_response.update({'vmx3_preferred_agent_id':'NONE'})
 
-    try:
-        logger.debug('********** Queue routing **********')
-        # Grab Queue info
-        get_queue_details = connect_client.describe_queue(
-            InstanceId=function_payload['function_data']['instance_id'],
-            QueueId=function_payload['function_data']['queue_id']
-        )
+        try:
+            logger.debug('********** Queue routing **********')
+            # Grab Queue info
+            get_queue_details = connect_client.describe_queue(
+                InstanceId=function_payload['function_data']['instance_id'],
+                QueueId=function_payload['function_data']['queue_id']
+            )
 
-        vmx3_queue_name = get_queue_details['Queue']['Name']
-        vmx3_queue_arn = get_queue_details['Queue']['QueueArn']
-        sub_response.update({'vmx3_queue_name':vmx3_queue_name,'vmx3_queue_arn':vmx3_queue_arn})
-        
-        if vmx3_mode == 'email':
-            try:
-                vmx3_email_to = get_queue_details['Queue']['Tags']['vmx3_queue_email']
-            except: 
-                vmx3_email_to = os.environ['default_email_target']
+            vmx3_queue_name = get_queue_details['Queue']['Name']
+            vmx3_queue_arn = get_queue_details['Queue']['QueueArn']
+            sub_response.update({'vmx3_queue_name':vmx3_queue_name,'vmx3_queue_arn':vmx3_queue_arn})
             
-            sub_response.update({'vmx3_email_to':vmx3_email_to})
+            if vmx3_mode == 'email':
+                try:
+                    vmx3_email_to = get_queue_details['Queue']['Tags']['vmx3_queue_email']
+                except: 
+                    vmx3_email_to = os.environ['default_email_target']
+                
+                sub_response.update({'vmx3_email_to':vmx3_email_to})
 
-        logger.debug('Targeted Queue: ' + vmx3_queue_name)
-        
-    except Exception as e:
-        logger.error('********** Record Result: Failed to extract queue details **********')
-        logger.error(e)
-        
-        entity_name = 'UNKNOWN'
+            logger.debug('Targeted Queue: ' + vmx3_queue_name)
+            
+        except Exception as e:
+            logger.error('********** Record Result: Failed to extract queue details **********')
+            logger.error(e)
+            
+            entity_name = 'UNKNOWN'
 
     logger.info('********** Sub:Build Data Payload Complete **********')
     logger.debug(sub_response)

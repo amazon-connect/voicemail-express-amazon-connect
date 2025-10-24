@@ -1,4 +1,4 @@
-current_version = '2025.09.12'
+current_version = '2025.09.13'
 '''
 **********************************************************************************************************************
  *  Copyright 2025 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -65,9 +65,9 @@ def vmx3_to_ses_email(function_payload):
     logger.debug('FROM ADDRESS: ' + vmx3_email_from_address)
 
     # Identify the proper address to send the email TO
-    if 'vmx3_email_target_address' in email_working_data:
-        if email_working_data['vmx3_email_target_address']:
-            vmx3_email_target_address = email_working_data['vmx3_email_target_address']
+    if 'vmx3_email_to' in email_working_data:
+        if email_working_data['vmx3_email_to']:
+            vmx3_email_target_address = email_working_data['vmx3_email_to']
     else:
         vmx3_email_target_address = os.environ['default_email_target']
 

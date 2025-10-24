@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: Deploys the Voicemail Express Lambda functions. Updated for 2025.09.12.
+Description: Deploys the Voicemail Express Lambda functions. Updated for 2025.09.13.
 
 Parameters:
   EXPTemplateVersion:

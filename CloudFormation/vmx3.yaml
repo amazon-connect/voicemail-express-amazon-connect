@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 
-Description: Deploys the Voicemail Express solution for Amazon Connect. Updated for 2025.09.12.
+Description: Deploys the Voicemail Express solution for Amazon Connect. Updated for 2025.09.13.
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -235,7 +235,7 @@ Parameters:
       it, or move it to Glacier?
   EXPTemplateVersion:
     Type: String
-    Default: 2025.09.12
+    Default: 2025.09.13
     Description: Template version. ONLY change if you have built a custom version.
   GuidedTaskRecordingLinksExpireInXMinutes:
     Type: String
