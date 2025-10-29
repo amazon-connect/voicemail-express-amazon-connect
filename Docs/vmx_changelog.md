@@ -4,6 +4,7 @@
 -  Fixed an issue with the sub_ses_email code that prevented queue emails from being set correctly
 -  Fixed an issue with the default agent email template that was causing agent-specific emails to fail
 -  Updated email documentation with correct example code for templates
+-  Added GovCloud version to repo
 ## 2025.09.12
 -  Changed VMX3 process to use Amazon Connect's IVR recording feature instead of KVS. Including ability to specifically extract VM from full IVR Recording use cases.
 -  Added Generative AI summary option
