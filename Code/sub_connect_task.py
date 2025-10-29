@@ -28,10 +28,8 @@ logger = logging.getLogger()
 def vmx3_to_connect_task(function_payload):
 
     # Debug lines for troubleshooting
-    logger.debug('Function Name: ' + os.environ['AWS_LAMBDA_FUNCTION_NAME'])
-    logger.debug('Code Version: ' + current_version)
-    logger.debug('VMX3 Package Version: ' + os.environ['package_version'])
-    logger.debug('********** Beginning Voicemail Task Delivery **********')
+
+    logger.debug('********** Beginning Sub: Voicemail to Task **********')
     logger.debug(function_payload)
 
     # Establish an empty container
@@ -47,7 +45,7 @@ def vmx3_to_connect_task(function_payload):
         logger.error(e)
         raise Exception
 
-    logger.debug('********** Step 1 of 3 Complete **********')
+    logger.debug('********** Sub: Voicemail to Task Step 1 of 3 Complete **********')
 
     # 2. Set parameters
     # Make sure transcript fits in a task field and truncate if it does not.
@@ -122,7 +120,7 @@ def vmx3_to_connect_task(function_payload):
             }
         }
         task_description = vmx3_short_transcript
-    logger.debug('********** Task References Set **********')
+    logger.debug('********** Sub: Voicemail to Task Step 2 of 3 Complete **********')
 
     # 3. Create the task and return response if successful
     try:
@@ -145,7 +143,7 @@ def vmx3_to_connect_task(function_payload):
         )
         logger.debug(create_task)
         logger.debug('********** Voicemail Task Created **********')
-        logger.debug('********** Step 3 of 3 Complete **********')
+        logger.debug('********** Sub: Voicemail to Task Step 3 of 3 Complete **********')
 
         function_response.update({'result':'success','task': create_task})
         return function_response

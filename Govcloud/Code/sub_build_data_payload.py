@@ -1,4 +1,4 @@
-current_version = '2025.09.12'
+current_version = '2025.09.13'
 '''
 **********************************************************************************************************************
  *  Copyright 2025 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -31,10 +31,7 @@ logger = logging.getLogger()
 def build_data_payload(function_payload):
 
     # Debug lines for troubleshooting
-    logger.debug('Function Name: ' + os.environ['AWS_LAMBDA_FUNCTION_NAME'])
-    logger.debug('Code Version: ' + current_version)
-    logger.debug('VMX3 Package Version: ' + os.environ['package_version'])
-    logger.info('********** Beginning Sub:Build Data Payload **********')
+    logger.info('********** Beginning Sub: Build Data Payload **********')
     logger.debug(function_payload)
 
     # Establish an empty container
@@ -117,7 +114,7 @@ def build_data_payload(function_payload):
         sub_response.update({'vmx3_preferred_agent_id':'NONE'})
 
     try:
-        logger.debug('********** Queue routing **********')
+        logger.debug('********** Queue Setup **********')
         # Grab Queue info
         get_queue_details = connect_client.describe_queue(
             InstanceId=function_payload['function_data']['instance_id'],
@@ -128,7 +125,7 @@ def build_data_payload(function_payload):
         vmx3_queue_arn = get_queue_details['Queue']['QueueArn']
         sub_response.update({'vmx3_queue_name':vmx3_queue_name,'vmx3_queue_arn':vmx3_queue_arn})
         
-        if vmx3_mode == 'email':
+        if vmx3_mode == 'email' and function_payload['vmx_data']['vmx3_target'] == 'queue':
             try:
                 vmx3_email_to = get_queue_details['Queue']['Tags']['vmx3_queue_email']
             except: 
@@ -142,7 +139,8 @@ def build_data_payload(function_payload):
         logger.error('********** Record Result: Failed to extract queue details **********')
         logger.error(e)
         
-        entity_name = 'UNKNOWN'
+        vmx3_queue_name = 'UNKNOWN'
+        sub_response.update({'vmx3_queue_name':vmx3_queue_name})
 
     logger.info('********** Sub:Build Data Payload Complete **********')
     logger.debug(sub_response)

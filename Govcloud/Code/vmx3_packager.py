@@ -1,4 +1,4 @@
-current_version = '2025.09.12'
+current_version = '2025.09.13'
 '''
 **********************************************************************************************************************
  *  Copyright 2025 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -61,11 +61,11 @@ def lambda_handler(event, context):
         transcribe_client = boto3.client('transcribe')
         connect_client = boto3.client('connect')
         logger.debug('********** Initialization Complete **********')
-        logger.debug('********** Step 1 of 7 complete **********')
+        logger.debug('********** Voicemail Packager Step 1 of 7 complete **********')
 
     except Exception as e:
         logger.error('********** Initialization Failed **********')
-        logger.debug('********** Step 1 of 7 failed **********')
+        logger.debug('********** Voicemail Packager Step 1 of 7 failed **********')
         logger.error(e)
         raise Exception
     
@@ -75,11 +75,11 @@ def lambda_handler(event, context):
         get_base_data = sub_key_data_extraction.key_data_extraction(event)
         logger.debug('********** Retrieved core data from events **********')
         function_payload.update(get_base_data)
-        logger.debug('********** Step 2 of 7 complete **********')
+        logger.debug('********** Voicemail Packager Step 2 of 7 complete **********')
 
     except Exception as e:
         logger.error('********** Failed to retrieve core data from events **********')
-        logger.debug('********** Step 2 of 7 failed **********')
+        logger.debug('********** Voicemail Packager Step 2 of 7 failed **********')
         logger.error(e)
         raise Exception
     
@@ -89,11 +89,11 @@ def lambda_handler(event, context):
         process_transcript = sub_process_transcript.process_transcript(function_payload)
         logger.debug('********** Processed transcript **********')
         function_payload['vmx_data'].update(process_transcript)
-        logger.debug('********** Step 3 of 7 complete **********')
+        logger.debug('********** Voicemail Packager Step 3 of 7 complete **********')
 
     except Exception as e:
         logger.error('********** Failed to process transcript **********')
-        logger.debug('********** Step 3 of 7 failed **********')
+        logger.debug('********** Voicemail Packager Step 3 of 7 failed **********')
         logger.error(e)
         raise Exception
     
@@ -103,11 +103,11 @@ def lambda_handler(event, context):
         configure_delivery_payload = sub_build_data_payload.build_data_payload(function_payload)
         logger.debug('********** Payload Set **********')
         function_payload['vmx_data'].update(configure_delivery_payload)
-        logger.debug('********** Step 4 of 7 complete **********')
+        logger.debug('********** Voicemail Packager Step 4 of 7 complete **********')
 
     except Exception as e:
         logger.error('********** Failed to set payload **********')
-        logger.debug('********** Step 4 of 7 failed **********')
+        logger.debug('********** Voicemail Packager Step 4 of 7 failed **********')
         logger.error(e)
         raise Exception
 
@@ -134,11 +134,11 @@ def lambda_handler(event, context):
             raw_url = response_from_presigner['presigned_url']
             function_payload['vmx_data'].update({'vmx3_presigned_url':raw_url})
             logger.debug('********** Presigner Completed **********')
-            logger.debug('********** Step 5 of 7 complete **********')
+            logger.debug('********** Voicemail Packager Step 5 of 7 complete **********')
 
         except Exception as e:
             logger.error('********** Record Result: Failed to generate presigned URL **********')
-            logger.error('********** Step 5 of 7 failed, but continuing with deliver since we have a transcript **********')
+            logger.error('********** Voicemail Packager Step 5 of 7 failed, but continuing with deliver since we have a transcript **********')
             logger.error(e)
             function_payload['vmx_data'].update({'vmx3_presigned_url':'https://github.com/amazon-connect/voicemail-express-amazon-connect/blob/main/Docs/vmx_troubleshooting.md#presigner-fails'})
 
@@ -156,7 +156,7 @@ def lambda_handler(event, context):
 
         except Exception as e:
             logger.error('********** Failed to activate task function **********')
-            logger.error('********** Step 6 of 7 failed **********')
+            logger.error('********** Voicemail Packager Step 6 of 7 failed **********')
             logger.error(e)
             raise Exception
         
@@ -167,7 +167,7 @@ def lambda_handler(event, context):
 
         except Exception as e:
             logger.error('********** Failed to complete email function **********')
-            logger.error('********** Step 6 of 7 failed **********')
+            logger.error('********** Voicemail Packager Step 6 of 7 failed **********')
             logger.error(e)
             raise Exception
         
@@ -178,13 +178,13 @@ def lambda_handler(event, context):
 
         except Exception as e:
             logger.error('********** Failed to complete guided task function **********')
-            logger.error('********** Step 6 of 7 failed **********')
+            logger.error('********** Voicemail Packager Step 6 of 7 failed **********')
             logger.error(e)
             raise Exception
 
     else:
         logger.error('********** Invalid mode selection **********')
-        logger.error('********** Step 6 of 7 failed **********')
+        logger.error('********** Voicemail Packager Step 6 of 7 failed **********')
         return {'status':'complete','result':'ERROR','reason':'Invalid mode selection'}
 
     if write_vm['result'] == 'success':
@@ -192,10 +192,10 @@ def lambda_handler(event, context):
 
     else:
         logger.error('********** VM failed to write **********')
-        logger.error('********** Step 6 of 7 failed **********')
+        logger.error('********** Voicemail Packager Step 6 of 7 failed **********')
         return {'status':'complete','result':'ERROR','reason':'Record VM failed to write'}
     
-    logger.debug('********** Step 6 of 7 complete **********')
+    logger.debug('********** Voicemail Packager Step 6 of 7 complete **********')
 
     # 7. Do cleanup
     # Delete the transcription job
@@ -225,7 +225,7 @@ def lambda_handler(event, context):
         logger.error('********** Failed to clear vmx3_flag **********')
         logger.error(e)
 
-    logger.debug('********** Step 7 of 7 complete **********')
+    logger.debug('********** Voicemail Packager Step 7 of 7 complete **********')
 
     function_response.update({'status':'complete','result':'success'})
     return function_response

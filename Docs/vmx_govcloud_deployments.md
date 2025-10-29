@@ -30,7 +30,7 @@ During the deployment, several AWS Lambda functions will be deployed. The code f
     -  FOR EXAMPLE: vmxdougjaso-vmx-source-us-gov-west-1
     -  Make sure to remember your prefix
 1.  Once created, create a new folder named `vmx3` in the new bucket
-1.  Download the [full VMX deployment package zip file](https://vmx-source-us-gov-west-1.s3.us-west-2.amazonaws.com/vmx3_version_2025.09.12.zip).
+1.  Download the [full VMX deployment package zip file](https://vmx-source-us-gov-west-1.s3.us-west-2.amazonaws.com/vmx3_govcloud_version_2025.09.13.zip).
 1.  Extract the top-level contents of the file and upload the version folder to the new folder you created in your S3 bucket. The contents of the folder should resemble the image below:
 ![S3 Object Structure](Img/vmx3_zip_structure.png)
 1. **Copy the Object URL for the vmx3.yaml file** (Example below)

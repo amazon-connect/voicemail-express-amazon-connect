@@ -28,10 +28,7 @@ logger = logging.getLogger()
 def vmx3_to_ses_email(function_payload):
 
     # Debug lines for troubleshooting
-    logger.debug('Function Name: ' + os.environ['AWS_LAMBDA_FUNCTION_NAME'])
-    logger.debug('Code Version: ' + current_version)
-    logger.debug('VMX3 Package Version: ' + os.environ['package_version'])
-    logger.debug('********** Beginning Voicemail Email Delivery **********')
+    logger.debug('********** Beginning Sub: Voicemail Email Delivery **********')
     logger.debug(function_payload)
 
     # Establish an empty container
@@ -52,7 +49,7 @@ def vmx3_to_ses_email(function_payload):
     # Get baseline data
     email_working_data = function_payload['vmx_data']
     logger.debug('********** Base data initialized **********')
-    logger.debug('********** Step 1 of 3 Complete **********')
+    logger.debug('********** Sub: Voicemail Email Delivery Step 1 of 3 Complete **********')
 
     # 2. Do mode and address checks. Pull in defaults where necessary
     # Identify the proper address to send the email FROM
@@ -107,7 +104,7 @@ def vmx3_to_ses_email(function_payload):
     # Dump data to text for inclusion in SES template
     vmx3_email_data = json.dumps(email_working_data)
 
-    logger.debug('********** Step 2 of 3 Complete **********')
+    logger.debug('********** Sub: Voicemail Email Delivery Step 2 of 3 Complete **********')
     
     # 3. Send the email using SES
     try:    
@@ -127,7 +124,7 @@ def vmx3_to_ses_email(function_payload):
         )
         logger.debug('********** Email request sent **********')
         logger.debug(send_email)
-        logger.debug('********** Step 3 of 3 Complete **********')
+        logger.debug('********** Sub: Voicemail Email Delivery Step 3 of 3 Complete **********')
 
         function_response.update({'result':'success','email': send_email})
         return function_response

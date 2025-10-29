@@ -31,9 +31,6 @@ logger = logging.getLogger()
 def process_transcript(function_payload):
 
     # Debug lines for troubleshooting
-    logger.debug('Function Name: ' + os.environ['AWS_LAMBDA_FUNCTION_NAME'])
-    logger.debug('Code Version: ' + current_version)
-    logger.debug('VMX3 Package Version: ' + os.environ['package_version'])
     logger.info('********** Beginning Sub:Process Transcription **********')
     logger.debug(function_payload)
 

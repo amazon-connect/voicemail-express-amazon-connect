@@ -1,4 +1,4 @@
-current_version = '2025.09.12'
+current_version = '2025.09.13'
 '''
 **********************************************************************************************************************
  *  Copyright 2025 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -28,10 +28,7 @@ logger = logging.getLogger()
 def genai_summarizer(function_payload):
 
     # Debug lines for troubleshooting
-    logger.debug('Function Name: ' + os.environ['AWS_LAMBDA_FUNCTION_NAME'])
-    logger.debug('Code Version: ' + current_version)
-    logger.debug('VMX3 Package Version: ' + os.environ['package_version'])
-    logger.debug('********** Beginning GenAI Summarizer **********')
+    logger.debug('********** Beginning Sub: GenAI Summarizer **********')
     logger.debug(function_payload)
 
     # Establish empty container
@@ -66,7 +63,7 @@ def genai_summarizer(function_payload):
         'temperature': 0.5,
         'topP': 0.9
     }
-    logger.debug('********** Step 1 of 2 complete **********')
+    logger.debug('********** Sub: GenAI Summarizer Step 1 of 2 complete **********')
 
     # 2. Send the summarization request
     # Send the request
@@ -86,6 +83,6 @@ def genai_summarizer(function_payload):
     
     # Send the result
     sub_response.update({'vmx3_genai_summary':summarization_response['output']['message']['content'][0]['text']})
-    logger.debug('********** Step 2 of 2 complete **********')
+    logger.debug('********** Sub: GenAI Summarizer Step 2 of 2 complete **********')
 
     return sub_response

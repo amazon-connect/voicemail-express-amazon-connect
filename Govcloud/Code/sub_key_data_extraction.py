@@ -1,4 +1,4 @@
-current_version = '2025.09.12'
+current_version = '2025.09.13'
 '''
 **********************************************************************************************************************
  *  Copyright 2025 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
@@ -29,15 +29,13 @@ logger = logging.getLogger()
 def key_data_extraction(function_payload):
 
     # Debug lines for troubleshooting
-    logger.debug('Function Name: ' + os.environ['AWS_LAMBDA_FUNCTION_NAME'])
-    logger.debug('Code Version: ' + current_version)
-    logger.debug('VMX3 Package Version: ' + os.environ['package_version'])
     logger.info('********** Beginning Sub: Key Data Extraction **********')
     logger.debug(function_payload)
 
     # Establish an empty container
     sub_response = {}
 
+    # Step 1: Key Data Extraction
     # Extract S3 buckets from environment vars, transcript key, recording key, and tags from the recording object
     sub_response.update({'function_data':{}})
     try:
@@ -56,15 +54,17 @@ def key_data_extraction(function_payload):
         contact_id = transcript_file_name.replace('.json','')
         sub_response['function_data'].update({'contact_id':contact_id})
         
-        logger.debug('********** Sub: Key Data Extraction - Successfulluy extracted core attributes **********')
+        logger.debug('********** Sub: Key Data Extraction Step 1 of 3 Complete **********')
 
     except Exception as e:
         logger.error('********** Sub: Key Data Extraction - Failed to extract core attributes **********')
         logger.error(e)
         raise Exception
     
+    # Step 2. Load tags and set attributes
+    # Load the tags from the initial recording object
+
     try:
-        # Load the tags from the initial recording object
         s3_client = boto3.client('s3')
 
         object_data = s3_client.get_object_tagging(
@@ -78,14 +78,15 @@ def key_data_extraction(function_payload):
         for i in object_tags:
             loaded_tags.update({i['Key']:i['Value']})
         
-        logger.debug('********** Sub: Key Data Extraction - Extracted s3 tags from recording **********')
+        logger.debug('********** Sub: Key Data Extraction Step 2 of 3 Complete **********')
 
     except Exception as e:
         logger.error('********** Sub: Key Data Extraction - Record Result: Failed to extract tags **********')
         logger.error(e)
         raise Exception
     
-    # Set instance attributes
+    # 3. Set key attributes
+    # Set attributes from tags
     try:
         queue_arn = loaded_tags['vmx3_queue_arn']
         arn_substring = queue_arn.split('instance/')[1]
@@ -142,6 +143,6 @@ def key_data_extraction(function_payload):
         logger.error(e)
         raise Exception
     
-    logger.info('********** Sub: Key Data Extraction - COMPLETE **********')
+    logger.info('********** Sub: Key Data Extraction Step 3 of 3 Complete **********')
     logger.debug(sub_response)
     return sub_response
