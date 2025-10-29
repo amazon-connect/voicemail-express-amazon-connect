@@ -1,0 +1,457 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Deploys the Voicemail Express core components. Updated for 2025.09.12.
+
+Parameters:
+  ConnectInstanceAlias:
+    Type: String
+  ExpiredRecordingBehavior:
+    Type: String
+  EnableBucketVersioning:
+    Type: String
+  EnableVMToConnectTask:
+    Type: String
+  EnableVMToConnectGuidedTask:
+    Type: String
+  EnableVMToEmail:
+    Type: String
+  RecordingsExpireInXDays:
+    Type: String
+
+Conditions:
+  AudioDelete: !Equals
+    - !Ref ExpiredRecordingBehavior
+    - delete
+  AudioGlacier: !Equals
+    - !Ref ExpiredRecordingBehavior
+    - glacier
+  AudioLifecycle: !Or
+    - !Equals
+      - !Ref ExpiredRecordingBehavior
+      - glacier
+    - !Equals
+      - !Ref ExpiredRecordingBehavior
+      - delete
+  ConnectTasksEnabled: !Equals
+    - !Ref EnableVMToConnectTask
+    - 'yes'
+  ConnectGuidedTasksEnabled: !Equals
+    - !Ref EnableVMToConnectGuidedTask
+    - 'yes'
+  AWSEmailEnabled: !Equals
+    - !Ref EnableVMToEmail
+    - 'yes'
+  NonGuidedOptions: !Or
+    - !Equals
+      - !Ref EnableVMToConnectTask
+      - 'yes'
+    - !Equals
+      - !Ref EnableVMToEmail
+      - 'yes'
+  EnableVersioning: !Equals
+    - !Ref EnableBucketVersioning
+    - 'yes'
+
+Resources:
+  VMXRecordingProcessorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join
+        - ''
+        - - VMX3_Recording_Processor_Role_
+          - !Ref ConnectInstanceAlias
+      Description: Provides appropriate access for the Recording Processor function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws-us-gov:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  VMXTimestamperRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join
+        - ''
+        - - VMX3_Time_Stamper_Role_
+          - !Ref ConnectInstanceAlias
+      Description: Provides appropriate access for the Timestamper role to function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws-us-gov:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  VMXGuidedFlowPresignerRole:
+    Type: AWS::IAM::Role
+    Condition: ConnectGuidedTasksEnabled
+    Properties:
+      RoleName: !Join
+        - ''
+        - - VMX3_Guided_Flow_Role_
+          - !Ref ConnectInstanceAlias
+      Description: Provides appropriate access for the Guided Flow Presigner function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws-us-gov:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  VMXPackagerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join
+        - ''
+        - - VMX3_Packager_Role_
+          - !Ref ConnectInstanceAlias
+      Description: Provides appropriate access for the Packager function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws-us-gov:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  VMXPresignerRole:
+    Type: AWS::IAM::Role
+    Condition: NonGuidedOptions
+    Properties:
+      RoleName: !Join
+        - ''
+        - - VMX3_Presigner_Role_
+          - !Ref ConnectInstanceAlias
+      Description: Provides appropriate access for the Presigner function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws-us-gov:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  VMXSESTemplateRole:
+    Type: AWS::IAM::Role
+    Condition: AWSEmailEnabled
+    Properties:
+      RoleName: !Join
+        - ''
+        - - VMX3_SES_Template_Role_
+          - !Ref ConnectInstanceAlias
+      Description: Provides appropriate access for the SES Template tool function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws-us-gov:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  VMXTranscriberRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join
+        - ''
+        - - VMX3_Transcriber_Role_
+          - !Ref ConnectInstanceAlias
+      Description: Provides appropriate access for the Transcriber function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws-us-gov:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  VMXTranscriberErrorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join
+        - ''
+        - - VMX3_Transcriber_Error_Role_
+          - !Ref ConnectInstanceAlias
+      Description: Provides appropriate access for the Transcriber function.
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws-us-gov:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  VMXS3RecordingsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join
+        - ''
+        - - vmx3-recordings-
+          - !Ref ConnectInstanceAlias
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      VersioningConfiguration:
+        !If
+          - EnableVersioning
+          - 
+            Status: Enabled
+          - !Ref 'AWS::NoValue'
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerPreferred
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+      LifecycleConfiguration: !If
+        - AudioLifecycle
+        - Rules:
+            - Id: VMXS3DeletePolicy
+              Status: !If
+                - AudioDelete
+                - Enabled
+                - Disabled
+              ExpirationInDays: !Ref RecordingsExpireInXDays
+            - Id: VMXS3GlacierPolicy
+              Status: !If
+                - AudioGlacier
+                - Enabled
+                - Disabled
+              Transitions:
+                - TransitionInDays: !Ref RecordingsExpireInXDays
+                  StorageClass: GLACIER
+        - !Ref AWS::NoValue
+
+  VMXS3TranscriptsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join
+        - ''
+        - - vmx3-transcripts-
+          - !Ref ConnectInstanceAlias
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      VersioningConfiguration:
+        !If
+          - EnableVersioning
+          - 
+            Status: Enabled
+          - !Ref 'AWS::NoValue'
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerPreferred
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+
+  VMXPresignerUserPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    DependsOn:
+      - VMXS3RecordingsBucket
+      - VMXS3TranscriptsBucket
+      - VMXPresignerRole
+    Condition: NonGuidedOptions
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+            Resource:
+              - !Join
+                - ''
+                - - !GetAtt VMXS3RecordingsBucket.Arn
+                  - /*
+      ManagedPolicyName: !Join
+        - ''
+        - - VMX3_Presigner_User_Policy_
+          - !Ref ConnectInstanceAlias
+      Roles:
+        - !Ref VMXPresignerRole
+
+  VMXPresignerUser:
+    Type: AWS::IAM::User
+    DependsOn:
+      - VMXPresignerUserPolicy
+    Condition: NonGuidedOptions
+    Properties:
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      UserName: !Join
+        - ''
+        - - VMX3_Presigner_User_
+          - !Ref ConnectInstanceAlias
+      ManagedPolicyArns:
+        - !Ref VMXPresignerUserPolicy
+        - arn:aws-us-gov:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  VMXUserKey:
+    Type: AWS::IAM::AccessKey
+    DependsOn:
+      - VMXPresignerUser
+    Condition: NonGuidedOptions
+    Properties:
+      Status: Active
+      UserName: !Ref VMXPresignerUser
+
+  VMXSecrets:
+    Type: AWS::SecretsManager::Secret
+    DependsOn:
+      - VMXPresignerUser
+      - VMXUserKey
+    Condition: NonGuidedOptions
+    Properties:
+      Name: !Join
+        - ''
+        - - VMX3_Access_Secrets_
+          - !Ref ConnectInstanceAlias
+      Description: Stores user credentials for the presigner function
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      SecretString: !Sub
+        - '{"vmx_iam_key_id":"${KeyID}","vmx_iam_key_secret":"${KeySecret}"}'
+        - KeyID: !Ref VMXUserKey
+          KeySecret: !GetAtt VMXUserKey.SecretAccessKey
+
+Outputs:
+  VMXS3RecordingsBucket:
+    Description: Voicemail Recording storage bucket name
+    Value: !Ref VMXS3RecordingsBucket
+  VMXS3RecordingsBuckettArn:
+    Description: Voicemail Recording storage bucket ARN
+    Value: !GetAtt VMXS3RecordingsBucket.Arn
+  VMXS3TranscriptsBucket:
+    Description: Voicemail Transcript storage bucket name
+    Value: !Ref VMXS3TranscriptsBucket
+  VMXS3TranscriptsBucketArn:
+    Description: Voicemail Transcript storage bucket ARN
+    Value: !GetAtt VMXS3TranscriptsBucket.Arn
+  VMXSecrets:
+    Description: Secrets ID
+    Condition: NonGuidedOptions
+    Value: !Ref VMXSecrets
+  VMXGuidedFlowPresignerRole:
+    Description: Guided flow presigner role name
+    Condition: ConnectGuidedTasksEnabled
+    Value: !Ref VMXGuidedFlowPresignerRole
+  VMXGuidedFlowPresignerRoleArn:
+    Description: Guided flow presigner role ARN
+    Condition: ConnectGuidedTasksEnabled
+    Value: !GetAtt VMXGuidedFlowPresignerRole.Arn
+  VMXRecordingProcessorRole:
+    Description: Recording Processor role name
+    Value: !Ref VMXRecordingProcessorRole
+  VMXRecordingProcessorRoleArn:
+    Description: Recording Processor role ARN
+    Value: !GetAtt VMXRecordingProcessorRole.Arn
+  VMXPackagerRole:
+    Description: Packager role name
+    Value: !Ref VMXPackagerRole
+  VMXPackagerRoleArn:
+    Description: Packager role ARN
+    Value: !GetAtt VMXPackagerRole.Arn
+  VMXPresignerRole:
+    Description: Presigner role name
+    Condition: NonGuidedOptions
+    Value: !Ref VMXPresignerRole
+  VMXPresignerRoleArn:
+    Description: Presigner role ARN
+    Condition: NonGuidedOptions
+    Value: !GetAtt VMXPresignerRole.Arn
+  VMXSESTemplateRole:
+    Description: SES Template role name
+    Condition: AWSEmailEnabled
+    Value: !Ref VMXSESTemplateRole
+  VMXSESTemplateRoleArn:
+    Description: SES Template role ARN
+    Condition: AWSEmailEnabled
+    Value: !GetAtt VMXSESTemplateRole.Arn
+  VMXTranscriberRole:
+    Description: Transcriber role name
+    Value: !Ref VMXTranscriberRole
+  VMXTranscriberRoleArn:
+    Description: Transcriber role ARN
+    Value: !GetAtt VMXTranscriberRole.Arn
+  VMXTranscriberErrorRole:
+    Description: Transcriber error handler role name
+    Value: !Ref VMXTranscriberErrorRole
+  VMXTranscriberErrorRoleArn:
+    Description: Transcriber error handler role ARN
+    Value: !GetAtt VMXTranscriberErrorRole.Arn
+  VMXTimestamperRoleArn:
+    Description: Timestamper role ARN
+    Value: !GetAtt VMXTimestamperRole.Arn
+  VMXTimestamperRole:
+    Description: Timestamper role name
+    Value: !Ref VMXTimestamperRole
