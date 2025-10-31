@@ -1,0 +1,91 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Deploys the Voicemail Express SES email templates and consolidated Lambda for managing templates. Updated for 2025.09.12
+
+Parameters:
+  AWSRegion:
+    Type: String
+  ConnectInstanceAlias:
+    Type: String
+  EXPDevBucketPrefix:
+    Type: String
+  EXPTemplateVersion:
+    Type: String
+  LambdaLoggingLevel:
+    Type: String
+  VMXSESTemplateRoleArn:
+    Type: String
+
+Resources:
+  VMEmailDefaultQueueTemplate:
+    Type: 'AWS::SES::Template'
+    Properties:
+      Template:
+        TemplateName:
+          !Join
+            - ''
+            - - 'vmx3_default_queue_'
+              - !Ref ConnectInstanceAlias
+        SubjectPart: 'New Amazon Connect Voicemail'
+        TextPart: 'You have a new voicemail from {{vmx3_from}}. You can listen to the message via the following URL: {{vmx3_presigned_url}}'
+        HtmlPart: '<div style="width: 100%; height: 80px; background-color: #415266; display: flex; align-items: center; padding-left: 5px; clear: both;font-family: sans-serif"><img src="https://raw.githubusercontent.com/amazon-connect/voicemail-express-amazon-connect/refs/heads/main/Docs/Img/connect.png" alt="Logo" style="max-height: 70px; width: auto;" /><h3 style="color: white; margin-left: 10px; font-size: 24px; font-family: sans-serif"> Amazon Connect Voicemail </h3></div><p style="font-family: sans-serif">You have a new voicemail from {{vmx3_from}}.</p><p style="font-family: sans-serif"><a href="{{vmx3_presigned_url}}">Listen to the voicemail.</a></p><h3 style="font-family: sans-serif">Generative AI Summary:</h3><p style="font-family: sans-serif">{{vmx3_genai_summary}}</p><h3 style="font-family: sans-serif">Voicemail Transcript:</h3><p style="font-family: sans-serif">{{vmx3_transcript_contents}}</p>'
+
+  VMEmailDefaultAgentTemplate:
+    Type: 'AWS::SES::Template'
+    Properties:
+      Template:
+        TemplateName:
+          !Join
+            - ''
+            - - 'vmx3_default_agent_'
+              - !Ref ConnectInstanceAlias
+        SubjectPart: 'New Amazon Connect Voicemail'
+        TextPart: 'Dear {{vmx3_agent_name}}, A voicemail was left for you from {{vmx3_from}}. You can listen to the message via the following URL: {{vmx3_presigned_url}}'
+        HtmlPart: '<div style="width: 100%; height: 80px; background-color: #415266; display: flex; align-items: center; padding-left: 5px; clear: both;font-family: sans-serif"><img src="https://raw.githubusercontent.com/amazon-connect/voicemail-express-amazon-connect/refs/heads/main/Docs/Img/connect.png" alt="Logo" style="max-height: 70px; width: auto;" /><h3 style="color: white; margin-left: 10px; font-size: 24px; font-family: sans-serif"> Amazon Connect Voicemail </h3></div><p style="font-family: sans-serif">You have a new voicemail from {{vmx3_from}}.</p><p style="font-family: sans-serif"><a href="{{vmx3_presigned_url}}">Listen to the voicemail.</a></p><h3 style="font-family: sans-serif">Generative AI Summary:</h3><p style="font-family: sans-serif">{{vmx3_genai_summary}}</p><h3 style="font-family: sans-serif">Voicemail Transcript:</h3><p style="font-family: sans-serif">{{vmx3_transcript_contents}}</p>'
+
+  VMXSESTools:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          !Join
+            - ''
+            - - !Ref EXPDevBucketPrefix
+              - 'vmx-source-'
+              - !Ref AWSRegion
+        S3Key:
+          !Join
+          - ''
+          - - 'vmx3/'
+            - !Ref EXPTemplateVersion
+            - /zip/vmx3_ses_template_tool.py.zip
+      Description: Provides prebuilt function to manage email templates
+      Environment:
+        Variables:
+          package_version:
+            Ref: EXPTemplateVersion
+      FunctionName:
+        !Join
+            - ''
+            - - 'VMXSESTool-'
+              - !Ref ConnectInstanceAlias
+      Handler: vmx3_ses_template_tool.lambda_handler
+      LoggingConfig:
+        ApplicationLogLevel:
+          Ref: LambdaLoggingLevel
+        LogFormat: JSON
+        SystemLogLevel: INFO
+      Role: !Ref VMXSESTemplateRoleArn
+      Runtime: python3.12
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      Timeout: 30
+
+Outputs:
+  VMEmailDefaultAgentTemplate:
+    Description: Default agent email template
+    Value: !Ref VMEmailDefaultAgentTemplate
+  VMEmailDefaultQueueTemplate:
+    Description: Default queue email template
+    Value: !Ref VMEmailDefaultQueueTemplate

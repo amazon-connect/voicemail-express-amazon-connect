@@ -1,0 +1,453 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Deploys the Voicemail Express Lambda functions. Updated for 2025.09.12.
+
+Parameters:
+  EXPTemplateVersion:
+    Type: String
+  AWSRegion:
+    Type: String
+  ConnectInstanceAlias:
+    Type: String
+  EnableVMToConnectTask:
+    Type: String
+  EnableVMToConnectGuidedTask:
+    Type: String
+  EnableVMToEmail:
+    Type: String
+  EnableGenAISummary:
+    Type: String
+  EXPDevBucketPrefix:
+    Type: String
+  LambdaLoggingLevel:
+    Type: String
+  VMEmailDefaultAgentTemplate:
+    Type: String
+  VMEmailDefaultQueueTemplate:
+    Type: String
+  VMDefaultMode:
+    Type: String
+  VMToEmailDefaultFrom:
+    Type: String
+  VMToEmailDefaultTo:
+    Type: String
+  VMXDefaultTaskFlow:
+    Type: String
+  VMXDefaultGuidedTaskFlow:
+    Type: String
+  VMXSecrets:
+    Type: String
+  VMXS3RecordingsBucket:
+    Type: String
+  VMXS3TranscriptsBucket:
+    Type: String
+  VMAgentAddressKey:
+    Type: String
+  VMXRecordingProcessorRoleArn:
+    Type: String
+  VMXRecordingProcessorRole:
+    Type: String
+  VMXPackagerRoleArn:
+    Type: String
+  VMXPackagerRole:
+    Type: String
+  VMXPresignerRoleArn:
+    Type: String
+  VMXPresignerRole:
+    Type: String
+  VMXTranscriberRoleArn:
+    Type: String
+  VMXTranscriberRole:
+    Type: String
+  VMXTranscriberErrorRoleArn:
+    Type: String
+  VMXTranscriberErrorRole:
+    Type: String
+  VMXTimestamperRoleArn:
+    Type: String
+  VMXTimestamperRole:
+    Type: String
+  TaskRecordingLinksExpireInXDays:
+    Type: String
+  EmailRecordingLinksExpireInXDays:
+    Type: String
+
+
+Mappings:
+  TZInfo:
+    us-east-1:
+      TZvalue: 'America/New_York'
+    us-west-2:
+      TZvalue: 'America/Los_Angeles'
+    af-south-1:
+      TZvalue: 'Africa/Johannesburg'
+    ap-southeast-1:
+      TZvalue: 'Asia/Singapore'
+    ap-southeast-2:
+      TZvalue: 'Australia/Sydney'
+    ap-northeast-1:
+      TZvalue: 'Asia/Tokyo'
+    ap-northeast-2:
+      TZvalue: 'Asia/Seoul'
+    ca-central-1:
+      TZvalue: 'Canada/Central'
+    eu-central-1:
+      TZvalue: 'Europe/Berlin'
+    eu-west-2:
+      TZvalue: 'Europe/London'
+    us-gov-west-1:
+      TZvalue: 'America/Los_Angeles'
+  VMModes:
+    AmazonConnectTask:
+      mode: task
+    AmazonConnectGuidedTask:
+      mode: guided_task
+    AmazonSimpleEmailService:
+      mode: email
+  BedrockModel:
+    us-east-1:
+      infRegion: 'us-east-1'
+      infModel: 'us.amazon.nova-lite-v1:0'
+    us-west-2:
+      infRegion: 'us-west-2'
+      infModel: 'us.amazon.nova-lite-v1:0'
+    af-south-1:
+      infRegion: 'eu-west-2'
+      infModel: 'amazon.nova-lite-v1:0'
+    ap-southeast-1:
+      infRegion: 'ap-southeast-1'
+      infModel: 'apac.amazon.nova-lite-v1:0'
+    ap-southeast-2:
+      infRegion: 'ap-southeast-2'
+      infModel: 'apac.amazon.nova-lite-v1:0'
+    ap-northeast-1:
+      infRegion: 'ap-northeast-1'
+      infModel: 'apac.amazon.nova-lite-v1:0'
+    ap-northeast-2:
+      infRegion: 'ap-northeast-2'
+      infModel: 'apac.amazon.nova-lite-v1:0'
+    ca-central-1:
+      infRegion: 'ca-central-1'
+      infModel: 'ca.amazon.nova-lite-v1:0'
+    eu-central-1:
+      infRegion: 'eu-central-1'
+      infModel: 'eu.amazon.nova-lite-v1:0'
+    eu-west-2:
+      infRegion: 'eu-west-2'
+      infModel: 'amazon.nova-lite-v1:0'
+    us-gov-west-1:
+      infRegion: 'us-gov-west-1'
+      infModel: 'anthropic.claude-3-5-sonnet-20240620-v1:0'
+
+Conditions:
+  ConnectTasksEnabled: !Equals 
+    - !Ref EnableVMToConnectTask
+    - 'yes'
+  ConnectGuidedTasksEnabled: !Equals
+    - !Ref EnableVMToConnectGuidedTask
+    - 'yes'
+  AWSEmailEnabled: !Equals
+    - !Ref EnableVMToEmail
+    - 'yes'
+  NonGuidedOptions: !Or
+    - !Equals
+      - !Ref EnableVMToConnectTask
+      - 'yes'
+    - !Equals
+      - !Ref EnableVMToEmail
+      - 'yes'
+
+Resources:
+  VMXPythonLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      CompatibleRuntimes:
+        - python3.13
+      Content:
+        S3Bucket:
+          !Join
+            - ''
+            - - !Ref EXPDevBucketPrefix
+              - 'vmx-source-'
+              - !Ref AWSRegion
+        S3Key:
+          !Join
+          - ''
+          - - 'vmx3/'
+            - !Ref EXPTemplateVersion
+            - /zip/vmx3_common_python.zip
+      Description: Provides dependencies code and functions for AWS Lambda functions that power Voicemail Express.
+      LayerName: !Join
+        - ''
+        - - 'VMX3-Python-Layer-'
+          - !Ref ConnectInstanceAlias
+      LicenseInfo: https://aws.amazon.com/apache-2-0
+
+  VMXPresigner:
+    Type: AWS::Lambda::Function
+    Condition: NonGuidedOptions
+    Properties:
+      Code:
+        S3Bucket:
+          !Join
+            - ''
+            - - !Ref EXPDevBucketPrefix
+              - 'vmx-source-'
+              - !Ref AWSRegion
+        S3Key:
+          !Join
+          - ''
+          - - 'vmx3/'
+            - !Ref EXPTemplateVersion
+            - /zip/vmx3_presigner.py.zip
+      Description: Generates the presigned URL that provides authenticated access to the voicemail recording in S3. Used for Task and EMail deliivery modes.
+      Environment:
+        Variables:
+          aws_region:
+            Ref: AWSRegion
+          tasks_url_expire:
+            Ref: TaskRecordingLinksExpireInXDays
+          email_url_expire:
+            Ref: EmailRecordingLinksExpireInXDays
+          secrets_key_id:
+            Ref: VMXSecrets
+          package_version:
+            Ref: EXPTemplateVersion
+      FunctionName:
+        !Join
+            - ''
+            - - 'VMX3-Presigner-'
+              - !Ref ConnectInstanceAlias
+      Handler: vmx3_presigner.lambda_handler
+      LoggingConfig:
+        ApplicationLogLevel:
+          Ref: LambdaLoggingLevel
+        LogFormat: JSON
+        SystemLogLevel: INFO
+      Role: !Ref VMXPresignerRoleArn
+      Runtime: python3.13
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      Timeout: 60
+
+  VMXPackager:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          !Join
+            - ''
+            - - !Ref EXPDevBucketPrefix
+              - 'vmx-source-'
+              - !Ref AWSRegion
+        S3Key:
+          !Join
+          - ''
+          - - 'vmx3/'
+            - !Ref EXPTemplateVersion
+            - /zip/vmx3_packager.py.zip
+      Description: Packages the voicemail and creates a task in Amazon Connect.
+      Environment:
+        Variables:
+          s3_recordings_bucket:
+            Ref: VMXS3RecordingsBucket
+          s3_transcripts_bucket:
+            Ref: VMXS3TranscriptsBucket
+          presigner_function_arn:
+            !If [NonGuidedOptions, !Ref VMXPresigner, 'AWS::NoValue']
+          default_task_flow:
+            !If [ConnectTasksEnabled, !Ref VMXDefaultTaskFlow, 'AWS::NoValue']
+          default_guided_task_flow:
+            !If [ConnectGuidedTasksEnabled, !Ref VMXDefaultGuidedTaskFlow, 'AWS::NoValue']
+          package_version:
+            Ref: EXPTemplateVersion
+          aws_region:
+            Ref: AWSRegion
+          inference_model:
+            Fn::FindInMap: [BedrockModel, !Ref "AWS::Region", infModel]            
+          inference_region:
+            Fn::FindInMap: [BedrockModel, !Ref "AWS::Region", infRegion]
+          TZ:
+            !FindInMap [TZInfo, !Ref "AWS::Region", TZvalue]
+          default_email_from:
+            !If [AWSEmailEnabled, !Ref VMToEmailDefaultFrom, 'AWS::NoValue']
+          default_email_target:
+            !If [AWSEmailEnabled, !Ref VMToEmailDefaultTo, 'AWS::NoValue']
+          default_vmx_mode:
+            !FindInMap [VMModes, !Ref "VMDefaultMode", mode]
+          default_agent_email_template:
+            !If [AWSEmailEnabled, !Ref VMEmailDefaultAgentTemplate, 'AWS::NoValue']
+          default_queue_email_template:
+            !If [AWSEmailEnabled, !Ref VMEmailDefaultQueueTemplate, 'AWS::NoValue']
+          vmx3_do_genai_summary:
+            Ref: EnableGenAISummary
+          agent_email_key:
+            !If [AWSEmailEnabled, !Ref VMAgentAddressKey, 'Email']
+      FunctionName:
+        !Join
+            - ''
+            - - 'VMX3-Packager-'
+              - !Ref ConnectInstanceAlias
+      Handler: vmx3_packager.lambda_handler
+      LoggingConfig:
+        ApplicationLogLevel:
+          Ref: LambdaLoggingLevel
+        LogFormat: JSON
+        SystemLogLevel: INFO
+      Role: !Ref VMXPackagerRoleArn
+      Layers: [!Ref VMXPythonLayer]
+      Runtime: python3.13
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      Timeout: 900
+
+  VMXTranscriber:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          !Join
+            - ''
+            - - !Ref EXPDevBucketPrefix
+              - 'vmx-source-'
+              - !Ref AWSRegion
+        S3Key:
+          !Join
+          - ''
+          - - 'vmx3/'
+            - !Ref EXPTemplateVersion
+            - /zip/vmx3_transcriber.py.zip
+      Description: Transcribes the voicemail to text and stores the transcription in S3
+      Environment:
+        Variables:
+          aws_region:
+            Ref: AWSRegion
+          s3_transcripts_bucket:
+            Ref: VMXS3TranscriptsBucket
+          package_version:
+            Ref: EXPTemplateVersion
+      FunctionName:
+        !Join
+            - ''
+            - - 'VMX3-Transcriber-'
+              - !Ref ConnectInstanceAlias
+      Handler: vmx3_transcriber.lambda_handler
+      Role: !Ref VMXTranscriberRoleArn
+      Runtime: python3.13
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      LoggingConfig:
+        ApplicationLogLevel:
+          Ref: LambdaLoggingLevel
+        LogFormat: JSON
+        SystemLogLevel: INFO
+      Timeout: 900
+
+  VMXRecordingProcessor:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          !Join
+            - ''
+            - - !Ref EXPDevBucketPrefix
+              - 'vmx-source-'
+              - !Ref AWSRegion
+        S3Key:
+          !Join
+          - ''
+          - - 'vmx3/'
+            - !Ref EXPTemplateVersion
+            - /zip/vmx3_recording_processor.py.zip
+      Description: Retrieves the voicemail from the IVR recording and trims as necessary.
+      Environment:
+        Variables:
+          aws_region:
+            Ref: AWSRegion
+          vmx3_recordings_bucket:
+            Ref: VMXS3RecordingsBucket
+          package_version:
+            Ref: EXPTemplateVersion
+      FunctionName:
+        !Join
+            - ''
+            - - 'VMX3-RecordingProcessor-'
+              - !Ref ConnectInstanceAlias
+      Handler: vmx3_recording_processor.lambda_handler
+      MemorySize: 512
+      Role: !Ref VMXRecordingProcessorRoleArn
+      Layers: [!Ref VMXPythonLayer]
+      Runtime: python3.13
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      LoggingConfig:
+        ApplicationLogLevel:
+          Ref: LambdaLoggingLevel
+        LogFormat: JSON
+        SystemLogLevel: INFO
+      Timeout: 900
+
+  VMXTranscribeErrorHandler:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          !Join
+            - ''
+            - - !Ref EXPDevBucketPrefix
+              - 'vmx-source-'
+              - !Ref AWSRegion
+        S3Key:
+          !Join
+          - ''
+          - - 'vmx3/'
+            - !Ref EXPTemplateVersion
+            - /zip/vmx3_transcription_error_handler.py.zip
+      Description: Catches transcription errors due to corrupt wav files and provides a notification transcript so that processing completes
+      Environment:
+        Variables:
+          aws_region:
+            Ref: AWSRegion
+          s3_transcripts_bucket:
+            Ref: VMXS3TranscriptsBucket
+          package_version:
+            Ref: EXPTemplateVersion
+      FunctionName:
+        !Join
+            - ''
+            - - 'VMX3-TranscribeErrorHandler-'
+              - !Ref ConnectInstanceAlias
+      Handler: vmx3_transcription_error_handler.lambda_handler
+      Role: !Ref VMXTranscriberErrorRoleArn
+      Runtime: python3.13
+      Tags: 
+        - Key: Solution
+          Value: VMX3
+      LoggingConfig:
+        ApplicationLogLevel:
+          Ref: LambdaLoggingLevel
+        LogFormat: JSON
+        SystemLogLevel: INFO
+      Timeout: 30
+
+Outputs:
+  VMXPackagerArn:
+    Description: ARN of the Packager function
+    Value: !GetAtt VMXPackager.Arn
+  VMXTranscriberArn:
+    Description: ARN of the Transcriber function
+    Value: !GetAtt VMXTranscriber.Arn
+  VMXRecordingProcessor:
+    Description: Name of the Recording Processor function
+    Value: !Ref VMXRecordingProcessor
+  VMXTranscribeErrorArn:
+    Description: ARN of the transcribe error handler function
+    Value: !GetAtt VMXTranscribeErrorHandler.Arn
+  VMXPresignerArn:
+    Description: ARN of the presigner function
+    Condition: NonGuidedOptions
+    Value: !GetAtt VMXPresigner.Arn

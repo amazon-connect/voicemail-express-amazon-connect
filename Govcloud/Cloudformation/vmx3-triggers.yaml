@@ -1,0 +1,174 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Deploys the Voicemail Express content triggers. Updated for 2025.09.12
+
+Parameters:
+  EXPTemplateVersion:
+    Type: String
+  ConnectCTRStreamARN:
+    Type: String
+  VMXS3RecordingsBucket:
+    Type: String
+  VMXS3RecordingsBucketArn:
+    Type: String
+  VMXS3TranscriptsBucket:
+    Type: String
+  VMXS3TranscriptsBucketArn:
+    Type: String
+  VMXPackagerArn:
+    Type: String
+  VMXTranscriberArn:
+    Type: String
+  VMXRecordingProcessor:
+    Type: String
+  ConnectInstanceAlias:
+    Type: String
+  VMXTranscribeErrorArn:
+    Type: String
+  ConnectInstanceARN:
+    Type: String
+  VMXGuidedFlowPresignerArn:
+    Type: String
+  EnableVMToConnectGuidedTask:
+    Type: String
+  VMXTimeStamperArn:
+    Type: String
+
+Conditions:
+  ConnectGuidedTasksEnabled: !Equals
+    - !Ref EnableVMToConnectGuidedTask
+    - 'yes'
+
+Resources:
+
+  GuidedTaskPresignerFunctionAssociation:
+    Type: AWS::Connect::IntegrationAssociation
+    Condition: ConnectGuidedTasksEnabled
+    Properties:
+      InstanceId: !Ref ConnectInstanceARN
+      IntegrationType: LAMBDA_FUNCTION
+      IntegrationArn: !Ref VMXGuidedFlowPresignerArn
+
+  TimestampLambdaFunctionAssociation:
+    Type: AWS::Connect::IntegrationAssociation
+    Properties:
+      InstanceId: !Ref ConnectInstanceARN
+      IntegrationType: LAMBDA_FUNCTION
+      IntegrationArn: !Ref VMXTimeStamperArn
+
+  RecordingsBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref VMXTranscriberArn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Ref VMXS3RecordingsBucketArn
+
+  TranscriptsBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref VMXPackagerArn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Ref VMXS3TranscriptsBucketArn
+
+  CTRStreamMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 1
+      BisectBatchOnFunctionError: true
+      Enabled: true
+      EventSourceArn: !Ref ConnectCTRStreamARN
+      FunctionName: !Ref VMXRecordingProcessor
+      MaximumRetryAttempts: 3
+      StartingPosition: LATEST
+      FilterCriteria:
+        Filters:
+          - Pattern: "{    \"data\":{        \"Attributes\":{            \"vmx3_flag\":[\"1\"]        },        \"Recordings\":{            \"ParticipantType\":[\"IVR\"]        },        \"Agent\":[null]    }}"
+
+  TranscriberRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: default
+      EventPattern:
+        source:
+          - aws.s3
+        detail-type:
+          - Object Created
+        detail:
+          bucket:
+            name:
+              - !Ref VMXS3RecordingsBucket
+      Name: !Join [ "-", [ !Ref ConnectInstanceAlias,TranscriberRule ] ]
+      State: ENABLED
+      Targets:
+        - Id: !Join [ "-", [ !Ref ConnectInstanceAlias,TranscriberFunction ] ]
+          Arn: !Ref VMXTranscriberArn
+
+  TrasncriberLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref VMXTranscriberArn
+      Principal: events.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !GetAtt TranscriberRule.Arn
+
+  PackagerRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: default
+      EventPattern:
+        source:
+          - aws.s3
+        detail-type:
+          - Object Created
+        detail:
+          bucket:
+            name:
+              - !Ref VMXS3TranscriptsBucket
+      Name: !Join [ "-", [ !Ref ConnectInstanceAlias,PackagerRule ] ]
+      State: ENABLED
+      Targets: 
+        - Id: !Join [ "-", [ !Ref ConnectInstanceAlias,PackagerFunction ] ]
+          Arn: !Ref VMXPackagerArn
+          
+  PackagerLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref VMXPackagerArn
+      Principal: events.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !GetAtt PackagerRule.Arn
+
+  TranscribeErrorRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: default
+      EventPattern: {
+          "source": ["aws.transcribe"],
+          "detail-type": ["Transcribe Job State Change"],
+          "detail": {
+            "TranscriptionJobName": [{
+              "prefix": "vmx3_"
+            }],
+            "TranscriptionJobStatus": ["FAILED"]
+          }
+        }
+      Name: !Join [ "-", [ !Ref ConnectInstanceAlias,TranscribeErrorRule ] ]
+      State: ENABLED
+      Targets: 
+        - Id: !Join [ "-", [ !Ref ConnectInstanceAlias,TranscribeErrorFunction ] ]
+          Arn: !Ref VMXTranscribeErrorArn
+  
+  TranscriberErrorLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref VMXTranscribeErrorArn
+      Principal: events.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !GetAtt TranscribeErrorRule.Arn
