@@ -8,9 +8,9 @@ Agent email address field is selectable on deployment and can be either: `Email,
 There are three additional contact attribute that applies to this delivery model:
 -  **vmx3_email_from (Optional)**: (email address) email address to send the voicemail FROM. If this is not provided, the default FROM address configured during implementation will be used.
     -  Example: 'email_from':'my_company@example.com'
--  **vnx3_email_to (Optional)**: (email address) email address to send the voicemail TO. If this is not provided, and it cannot be determined by looking at the agent or queue data, the default TO address configured during implementation will be used.
+-  **vmx3_email_to (Optional)**: (email address) email address to send the voicemail TO. If this is not provided, and it cannot be determined by looking at the agent or queue data, the default TO address configured during implementation will be used.
     -  Example: 'email_to':'my_company@example.com'
--  **evmx3_mail_template (Optional)**: (template name) Amazon SES email template to use when sending this email.  If this is not provided, the default email template configured during implementation will be used.
+-  **vmx3_mail_template (Optional)**: (template name) Amazon SES email template to use when sending this email.  If this is not provided, the default email template configured during implementation will be used.
 
 ## Creating New Email Templates Using the Provided Lambda Functions
 To help customers manage email templates, the voicemail express solution includes an AWS Lambda function that allows for easy creation, modification, and deletion of email templates. You do not have to use this function to build or modify templates, however SES only provides programmatic or CLI methods for managing templates; there is no GUI.
