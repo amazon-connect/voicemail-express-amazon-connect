@@ -1,3 +1,6 @@
+> [!IMPORTANT]  
+> **2025/11/05** - an issue has been identified in some regions that impacts how views are processed with dynamic code. If you are using the Guided Flow experience, and suddenly the media player bar is missing or greyed out, please [follow the steps here](./Docs/vmx_media_player_fix.md) to resolve. Once the corrected flow is added to the templates and validated, this message will be removed. 
+
 # Voicemail Express V3
 Voicemail Express is designed to provide basic voicemail functionality to Amazon Connect. It has been designed to work seamlessly behind the scenes, providing voicemail options for all agents and queues by default. It is an evolution of the Voicemail Express solution that was created specifically for Service Cloud Voice customers by the AWS team that worked with Salesforce to develop Service Cloud Voice. That solution has been cloned and included with Service Cloud Voice, and is now used at scale by customers on that offering. This version removes the Salesforce-centric options, providing the same easy-to-deploy-and-use voicemail option for standard Amazon Connect customers. Typically speaking, Voicemail Express can be deployed and validated in less than 15 minutes. 
 
