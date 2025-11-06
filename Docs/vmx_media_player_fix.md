@@ -34,4 +34,4 @@ In some regions, the rendering of the view is incorrectly formatting the media p
 
 Once this is complete, run some test voicemails through the guided flow experience to validate functionality.
 
-Thanks to [Javier Vargas](https://www.linkedin.com/in/javier-eduardo-vargas-a34041a/) for identifying this and coming up with a solution. 
+Thanks to [Javier Vargas](https://github.com/jeve7)) for identifying this and coming up with a solution. 
