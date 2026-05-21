@@ -1,20 +1,56 @@
+# Voicemail Email Delivery with .wav File Attachment
+
+## Overview
+This modification changes the email delivery mode to attach the voicemail recording as a .wav file directly to the email, instead of including a presigned S3 URL link. This ensures agents can always access the recording regardless of URL expiration.
+
+## What Changed
+
+### 1. Modified File: `Code/sub_ses_email.py`
+
+**Before:** Used SES template-based `send_email` with a presigned URL link in the email body.
+
+**After:** Uses SES raw email (`send_email` with `Raw` content) to construct a MIME multipart message with the .wav file attached.
+
+Key changes:
+- Added `email.mime` imports for building MIME messages
+- Added S3 client to download the recording
+- Builds HTML email body inline (no longer uses SES templates)
+- Attaches the .wav file as `audio/wav`
+- Sends via SES raw email API
+
+### 2. IAM Policy Update
+
+The Lambda execution role (`VMX3_Packager_Role_<instance>`) needs `ses:SendRawEmail` permission added to its SES policy statement.
+
+**Before:**
+```json
+{
+    "Action": [
+        "ses:SendEmail",
+        "ses:SendTemplatedEmail"
+    ],
+    "Resource": "*",
+    "Effect": "Allow"
+}
+```
+
+**After:**
+```json
+{
+    "Action": [
+        "ses:SendEmail",
+        "ses:SendTemplatedEmail",
+        "ses:SendRawEmail"
+    ],
+    "Resource": "*",
+    "Effect": "Allow"
+}
+```
+
+## Modified Code
+
+```python
 current_version = '2025.09.13-modified'
-'''
-**********************************************************************************************************************
- *  Copyright 2025 Amazon.com, Inc. or its affiliates. All Rights Reserved                                            *
- *                                                                                                                    *
- *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated      *
- *  documentation files (the "Software"), to deal in the Software without restriction, including without limitation   *
- *  the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and  *
- *  to permit persons to whom the Software is furnished to do so.                                                     *
- *                                                                                                                    *
- *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO  *
- *  THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE    *
- *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF         *
- *  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS *
- *  IN THE SOFTWARE.                                                                                                  *
- **********************************************************************************************************************
-'''
 
 # Import required modules
 import boto3
@@ -25,98 +61,77 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 
-# Establish logging configuration
 logger = logging.getLogger()
 
 def vmx3_to_ses_email(function_payload):
 
-    # Debug lines for troubleshooting
     logger.debug('********** Beginning Sub: Voicemail Email Delivery (with attachment) **********')
     logger.debug(function_payload)
 
-    # Establish an empty container
     function_response = {}
 
-    # 1. Establish clients and baseline data
-    logger.debug('Beginning Voicemail to email')
+    # 1. Establish clients
     try:
         ses_client = boto3.client('sesv2')
         s3_client = boto3.client('s3')
         logger.debug('********** Clients initialized **********')
-    
     except Exception as e:
         logger.error('********** VMX Initialization Error: Could not establish needed clients **********')
         logger.error(e)
         raise Exception
-    
-    # Get baseline data
+
     email_working_data = function_payload['vmx_data']
-    logger.debug('********** Base data initialized **********')
     logger.debug('********** Sub: Voicemail Email Delivery Step 1 of 4 Complete **********')
 
-    # 2. Do mode and address checks. Pull in defaults where necessary
-    # Identify the proper address to send the email FROM
+    # 2. Resolve FROM/TO addresses
     if 'vmx3_email_from' in email_working_data:
         if email_working_data['vmx3_email_from']:
             vmx3_email_from_address = email_working_data['vmx3_email_from']
     else:
         vmx3_email_from_address = os.environ['default_email_from']
 
-    logger.debug('FROM ADDRESS: ' + vmx3_email_from_address)
-
-    # Identify the proper address to send the email TO
     if 'vmx3_email_to' in email_working_data:
         if email_working_data['vmx3_email_to']:
             vmx3_email_target_address = email_working_data['vmx3_email_to']
     else:
         vmx3_email_target_address = os.environ['default_email_target']
 
-    if '@' in vmx3_email_target_address:
-        logger.info('Valid email address format')
-    else:
+    if '@' not in vmx3_email_target_address:
         vmx3_email_target_address = os.environ['default_email_target']
 
-    logger.debug('TO ADDRESS: ' + vmx3_email_target_address)
-
-    # Make sure transcript fits in field and truncate if it does not.
+    # Truncate transcript if needed
     vmx3_transcript = email_working_data['vmx3_transcript_contents']
     if len(vmx3_transcript) > 2048:
         vmx3_short_transcript = vmx3_transcript[:2048] + ' ...(truncated)'
-        logger.debug('********** Transcript truncated **********')
     else:
-        logger.debug('********** Transcript within limits **********')
         vmx3_short_transcript = vmx3_transcript
 
     logger.debug('********** Sub: Voicemail Email Delivery Step 2 of 4 Complete **********')
 
-    # 3. Download the .wav recording from S3
+    # 3. Download .wav from S3
     try:
         recording_bucket = function_payload['function_data']['recording_bucket']
         recording_key = function_payload['function_data']['recording_key']
-        
+
         recording_obj = s3_client.get_object(Bucket=recording_bucket, Key=recording_key)
         audio_data = recording_obj['Body'].read()
-        
-        # Extract filename from key
+
         recording_filename = recording_key.rsplit('/', 1)[-1] if '/' in recording_key else recording_key
-        
         logger.debug('********** Recording downloaded from S3: ' + recording_key + ' **********')
         logger.debug('********** Sub: Voicemail Email Delivery Step 3 of 4 Complete **********')
-
     except Exception as e:
         logger.error('********** Failed to download recording from S3 **********')
         logger.error(e)
         raise Exception
 
-    # 4. Build MIME email with .wav attachment and send via SES raw email
+    # 4. Build MIME email with attachment and send
     try:
-        # Build the MIME message
         msg = MIMEMultipart('mixed')
         msg['Subject'] = 'Amazon Connect Voicemail from ' + email_working_data.get('vmx3_from', 'Unknown')
         msg['From'] = vmx3_email_from_address
         msg['To'] = vmx3_email_target_address
 
-        # Build HTML body
+        # HTML body
         genai_summary = email_working_data.get('vmx3_genai_summary', 'Not enabled')
         queue_name = email_working_data.get('vmx3_queue_name', 'Unknown')
         caller_number = email_working_data.get('vmx3_from', 'Unknown')
@@ -136,17 +151,16 @@ def vmx3_to_ses_email(function_payload):
             '</div>'
         )
 
-        # Attach HTML body
         body_part = MIMEText(html_body, 'html')
         msg.attach(body_part)
 
-        # Attach the .wav file
+        # Attach .wav
         attachment = MIMEApplication(audio_data)
         attachment.add_header('Content-Disposition', 'attachment', filename=recording_filename)
         attachment.add_header('Content-Type', 'audio/wav')
         msg.attach(attachment)
 
-        # Send raw email via SES
+        # Send raw email
         send_email = ses_client.send_email(
             Content={
                 'Raw': {
@@ -156,7 +170,6 @@ def vmx3_to_ses_email(function_payload):
         )
 
         logger.debug('********** Email with attachment sent **********')
-        logger.debug(send_email)
         logger.debug('********** Sub: Voicemail Email Delivery Step 4 of 4 Complete **********')
 
         function_response.update({'result':'success','email': send_email})
@@ -166,3 +179,19 @@ def vmx3_to_ses_email(function_payload):
         logger.error('********** Failed to send email with attachment **********')
         logger.error(e)
         raise Exception
+```
+
+## Deployment Steps
+
+1. Download the current Packager Lambda code package
+2. Replace `sub_ses_email.py` with the modified version above
+3. Re-zip and upload to the Lambda function (`VMX3-Packager-<instance>`)
+4. Add `ses:SendRawEmail` to the Packager role's IAM policy
+
+## Considerations
+
+- SES has a 40MB raw message size limit — most voicemails are well under this
+- Lambda has 128MB default memory — for very long recordings, you may need to increase Lambda memory
+- SES templates are no longer used for email delivery — the HTML body is built in code
+- This does not affect Task or Guided Task delivery modes
+- The presigned URL is still generated (by the packager flow) but is no longer included in the email body
