@@ -166,7 +166,15 @@ Resources:
             Action:
               - 'ses:SendEmail'
               - 'ses:SendTemplatedEmail'
-            Resource: '*'
+              - 'ses:SendRawEmail'
+            Resource:
+              !Join
+                - ''
+                - - 'arn:aws:ses:'
+                  - !Ref AWSRegion
+                  - ':'
+                  - !Ref AWS::AccountId
+                  - ':identity/*'
           - Effect: Allow
             Action:
               - 'transcribe:DeleteTranscriptionJob'
